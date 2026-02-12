@@ -1,0 +1,3671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NCAA Bracketology Projector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ncaa-blue: #003087;
+      --court-orange: #ff6b35;
+      --gold: #fdb927;
+      --dark: #0f1419;
+      --slate: #1e2936;
+      --card-bg: #2a3441;
+      --white: #ffffff;
+      --cream: #f8f9fa;
+      --green: #10b981;
+      --red: #ef4444;
+      --gray: #6b7280;
+    }
+
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background: linear-gradient(135deg, var(--dark) 0%, var(--slate) 100%);
+      color: var(--cream);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 3.5rem;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      color: var(--cream);
+      opacity: 0.8;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 3fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .panel-header {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.8rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--gold);
+      padding-bottom: 0.5rem;
+    }
+
+    .games-list {
+      max-height: 600px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+
+    .game-card {
+      background: var(--slate);
+      border: 1px solid rgba(253, 185, 39, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      transition: all 0.3s;
+    }
+
+    .game-time {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--gold);
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      padding: 0.3rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+
+    .game-card:hover {
+      border-color: var(--gold);
+    }
+
+    .game-card.completed {
+      opacity: 0.6;
+      border-color: var(--gray);
+    }
+
+    .game-time {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--gold);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      padding: 0.3rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+
+    .game-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .game-quad {
+      font-size: 0.85rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .quad-1 { background: #dc2626; color: white; }
+    .quad-2 { background: #f59e0b; color: white; }
+    .quad-3 { background: #10b981; color: white; }
+    .quad-4 { background: #3b82f6; color: white; }
+
+    .game-matchup {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .team-option {
+      padding: 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .team-option:hover {
+      background: rgba(255, 107, 53, 0.2);
+      border-color: var(--court-orange);
+    }
+
+    .team-option.selected {
+      background: rgba(16, 185, 129, 0.3);
+      border-color: var(--green);
+      font-weight: 700;
+    }
+
+    .team-option.loser {
+      opacity: 0.4;
+    }
+
+    .team-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .team-net {
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 0.2rem;
+    }
+
+    .vs {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .at-symbol {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .game-impact {
+      font-size: 0.85rem;
+      color: var(--cream);
+      opacity: 0.8;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+
+    .rankings-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    .rankings-table thead {
+      background: var(--slate);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .rankings-table th {
+      padding: 0.8rem;
+      text-align: left;
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.95rem;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .rankings-table th.center {
+      text-align: center;
+    }
+
+    .rankings-table td {
+      padding: 0.7rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .rankings-table td.center {
+      text-align: center;
+    }
+
+    .rankings-table tbody tr {
+      transition: background 0.3s;
+    }
+
+    .rankings-table tbody tr:hover {
+      background: rgba(255, 107, 53, 0.1);
+    }
+
+    .rankings-table tbody tr.in-field {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .rankings-table tbody tr.bubble {
+      background: rgba(251, 191, 36, 0.1);
+    }
+
+    .rankings-table tbody tr.out {
+      opacity: 0.5;
+    }
+
+    .rankings-table tbody tr.highlighted {
+      background: rgba(255, 107, 53, 0.3) !important;
+      border-left: 4px solid var(--court-orange);
+    }
+
+    .rank-cell {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .team-cell {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .points-cell {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--cream);
+    }
+
+    .status-badge {
+      padding: 0.3rem 0.7rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-lock { background: #10b981; color: white; }
+    .status-safe { background: #22c55e; color: white; }
+    .status-bubble { background: #f59e0b; color: white; }
+    .status-out { background: #6b7280; color: white; }
+    .status-autobid { background: #8b5cf6; color: white; }
+
+    .cutline {
+      border-top: 3px solid var(--court-orange) !important;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.5rem;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--cream);
+      opacity: 0.8;
+      margin-top: 0.3rem;
+    }
+
+    .scrollable {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .scrollable::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .scrollable::-webkit-scrollbar-track {
+      background: var(--slate);
+      border-radius: 4px;
+    }
+
+    .scrollable::-webkit-scrollbar-thumb {
+      background: var(--gold);
+      border-radius: 4px;
+    }
+
+    .context-menu {
+      display: none;
+      position: fixed;
+      background: var(--card-bg);
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      padding: 0.5rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      min-width: 150px;
+    }
+
+    .context-menu.active {
+      display: block;
+    }
+
+    .context-menu-item {
+      padding: 0.7rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: var(--cream);
+      font-size: 0.95rem;
+    }
+
+    .context-menu-item:hover {
+      background: rgba(255, 107, 53, 0.3);
+    }
+
+    .btn {
+      background: var(--court-orange);
+      color: var(--white);
+      border: none;
+      padding: 0.8rem 1.5rem;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .btn:hover {
+      background: #ff8555;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+    }
+
+    .filter-section {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    .filter-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+      flex: 1;
+      padding: 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .filter-btn:hover {
+      background: rgba(255, 107, 53, 0.2);
+      border-color: var(--court-orange);
+    }
+
+    .filter-btn.active {
+      background: var(--court-orange);
+      border-color: var(--court-orange);
+      font-weight: 700;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 0.7rem;
+      background: var(--slate);
+      border: 1px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .filter-section {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    .filter-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+      flex: 1;
+      padding: 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .filter-btn:hover {
+      background: rgba(255, 107, 53, 0.2);
+      border-color: var(--court-orange);
+    }
+
+    .filter-btn.active {
+      background: var(--court-orange);
+      border-color: var(--court-orange);
+      font-weight: 700;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 0.7rem;
+      background: var(--slate);
+      border: 1px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .admin-panel {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--dark);
+      z-index: 2000;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    .admin-panel.active {
+      display: block;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .admin-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.5rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    .back-btn {
+      background: var(--slate);
+      color: var(--cream);
+      border: 2px solid var(--gold);
+      padding: 0.8rem 1.5rem;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .back-btn:hover {
+      background: var(--gold);
+      color: var(--dark);
+    }
+
+    .admin-section {
+      background: var(--card-bg);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .admin-section h3 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.5rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .csv-upload {
+      margin-top: 1rem;
+    }
+
+    .csv-upload input[type="file"] {
+      display: block;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background: var(--slate);
+      border: 1px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      cursor: pointer;
+    }
+
+    .archive-games {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+
+    .archive-game-card {
+      background: var(--slate);
+      border: 1px solid rgba(253, 185, 39, 0.2);
+      border-radius: 6px;
+      padding: 1rem;
+    }
+
+    .archive-game-card.archived {
+      opacity: 0.5;
+      border-color: var(--gray);
+    }
+
+    .archive-game-info {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .archive-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+    }
+
+    .archive-btn:hover {
+      background: #dc2626;
+    }
+
+    .archive-btn.unarchive {
+      background: var(--green);
+    }
+
+    .archive-btn.unarchive:hover {
+      background: #059669;
+    }
+
+    .login-panel {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(5px);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-panel.active {
+      display: flex;
+    }
+
+    .login-box {
+      background: var(--card-bg);
+      border: 3px solid var(--gold);
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .login-box h2 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2rem;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.2rem;
+      background: var(--slate);
+      border: 2px solid rgba(253, 185, 39, 0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .login-box input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .login-error {
+      color: var(--red);
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Bracket Visualization Styles */
+    .play-in-game {
+      background: var(--slate);
+      border-radius: 8px;
+      padding: 1rem;
+      border-left: 4px solid var(--court-orange);
+    }
+
+    .play-in-matchup {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .play-in-team {
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bracket-round {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      min-width: 220px;
+    }
+
+    .bracket-round-title {
+      font-family: 'Oswald', sans-serif;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .bracket-matchup {
+      background: var(--slate);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--gold);
+    }
+
+    .bracket-team {
+      padding: 0.7rem;
+      margin: 0.3rem 0;
+      background: rgba(255,255,255,0.03);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .bracket-team-seed {
+      font-weight: 700;
+      color: var(--gold);
+      min-width: 30px;
+      font-size: 1.1rem;
+    }
+
+    .bracket-team-name {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .bracket-vs {
+      text-align: center;
+      color: var(--gold);
+      font-weight: 700;
+      padding: 0.3rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>NCAA Bracketology</h1>
+    <p class="subtitle">Quad Points Per Game Projection System <span id="currentTime" style="font-size: 0.8rem; opacity: 0.7; margin-left: 1rem;"></span></p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="totalTeams">365</div>
+        <div class="stat-label">Teams Tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="futureGames">0</div>
+        <div class="stat-label">Undecided Games</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="gamesDecided">0</div>
+        <div class="stat-label">Games Decided</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="cutlinePoints">0.00</div>
+        <div class="stat-label">Last Team In PPG</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="panel">
+        <h2 class="panel-header">Games</h2>
+        
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(253, 185, 39, 0.15), rgba(255, 107, 53, 0.15)); border: 2px solid var(--gold); border-radius: 8px;">
+          <button class="btn" onclick="visualizeBracket()" style="width: 100%; background: var(--gold); border-color: var(--gold); color: var(--dark); font-weight: 700; font-size: 1.1rem; padding: 1rem;">
+            🏀 VISUALIZE BRACKET
+          </button>
+        </div>
+        
+        <div class="filter-section">
+          <div class="filter-toggle">
+            <button class="filter-btn active" id="dateFilterBtn" onclick="setFilterMode('date')">By Date</button>
+            <button class="filter-btn" id="teamFilterBtn" onclick="setFilterMode('team')">By Team</button>
+          </div>
+          
+          <select class="filter-select" id="filterSelect" onchange="applyFilter()">
+            <option value="all">All Games (Feb 9, 2026)</option>
+          </select>
+        </div>
+
+        <div class="games-list" id="gamesList"></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-header">Current Standings</h2>
+        
+        <div class="scrollable">
+          <table class="rankings-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Team</th>
+                <th class="center">NET</th>
+                <th class="center">Quad PPG</th>
+                <th class="center">Total Pts</th>
+                <th class="center">Games</th>
+                <th class="center">Status</th>
+                <th class="center">Championship</th>
+              </tr>
+            </thead>
+            <tbody id="rankingsBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="showAdminLogin()">Admin Panel</div>
+  </div>
+
+  <div id="loginPanel" class="login-panel">
+    <div class="login-box">
+      <h2>Admin Login</h2>
+      <input type="password" id="adminPassword" placeholder="Enter password" onkeypress="if(event.key==='Enter') checkAdminPassword()">
+      <button class="btn" onclick="checkAdminPassword()">Login</button>
+      <button class="btn btn-secondary" style="margin-left: 0.5rem;" onclick="closeAdminLogin()">Cancel</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+
+  <div id="adminPanel" class="admin-panel">
+    <div class="admin-header">
+      <h1 class="admin-title">Admin Panel</h1>
+      <button class="back-btn" onclick="closeAdminPanel()">← Back to Bracket</button>
+    </div>
+
+    <div class="admin-section">
+      <h3>Update Team Data (CSV)</h3>
+      <p style="margin-bottom: 1rem; color: var(--cream); opacity: 0.8;">
+        Upload a CSV file with columns: Team Name, NET Ranking, Quad Points, Games Played
+      </p>
+      <div class="csv-upload">
+        <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload(event)">
+        <button class="btn" onclick="document.getElementById('csvFile').click()">Choose CSV File</button>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h3>Archive Games</h3>
+      <p style="margin-bottom: 1rem; color: var(--cream); opacity: 0.8;">
+        Archive completed games to remove them from the schedule
+      </p>
+      
+      <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); border: 2px solid #ef4444; border-radius: 10px;">
+        <h4 style="color: #ef4444; margin-bottom: 1rem; font-size: 1.2rem;">🗑️ Bulk Archive by Date</h4>
+        <div style="display: flex; gap: 1rem; align-items: flex-end;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 0.5rem; color: var(--cream); font-weight: 600; font-size: 0.95rem;">Select Date:</label>
+            <select id="archiveDateSelect" style="width: 100%; padding: 0.9rem; background: var(--dark); border: 2px solid rgba(253,185,39,0.4); border-radius: 6px; color: var(--cream); font-size: 1rem; cursor: pointer;">
+              <option value="">-- Choose a date to archive --</option>
+            </select>
+          </div>
+          <button id="archiveDateBtn" class="btn" onclick="executeArchiveByDate()" style="background: #dc2626; border-color: #dc2626; padding: 0.9rem 2rem; font-weight: 700; white-space: nowrap; font-size: 1.05rem;" disabled>
+            ARCHIVE ALL
+          </button>
+        </div>
+        <p style="margin-top: 0.8rem; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-style: italic;">
+          ⚠️ This will archive all games from the selected date and remove them from the active schedule.
+        </p>
+      </div>
+      
+      <div class="archive-games" id="archiveGamesList"></div>
+    </div>
+  </div>
+
+  <!-- Bracket Visualization Panel -->
+  <div id="bracketPanel" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 10000; overflow-y: auto;">
+    <div style="padding: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="font-family: 'Oswald', sans-serif; font-size: 3rem; color: var(--gold); text-transform: uppercase;">🏀 Tournament Bracket</h1>
+        <button class="btn" onclick="closeBracket()" style="background: var(--gold); color: var(--dark); font-weight: 700; padding: 1rem 2rem;">
+          ← Back to Projector
+        </button>
+      </div>
+
+      <!-- Play-In Games Section -->
+      <div style="background: rgba(255, 107, 53, 0.1); border: 2px solid var(--court-orange); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: var(--court-orange); margin-bottom: 1rem; font-size: 1.5rem;">First Four (Play-In Games)</h2>
+        <div id="playInGames" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;"></div>
+      </div>
+
+      <!-- Main Bracket -->
+      <div style="overflow-x: auto; padding: 2rem 0;">
+        <div id="bracketDisplay" style="display: flex; gap: 3rem; min-width: max-content; justify-content: center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Enable/disable archive button based on selection
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateSelect = document.getElementById('archiveDateSelect');
+      const archiveBtn = document.getElementById('archiveDateBtn');
+      
+      if (dateSelect && archiveBtn) {
+        dateSelect.addEventListener('change', function() {
+          archiveBtn.disabled = !this.value;
+          if (this.value) {
+            archiveBtn.style.opacity = '1';
+            archiveBtn.style.cursor = 'pointer';
+          } else {
+            archiveBtn.style.opacity = '0.5';
+            archiveBtn.style.cursor = 'not-allowed';
+          }
+        });
+      }
+    });
+  </script>
+
+  <script>
+    // All 365 teams data
+    const initialTeams = [
+      {name: "Michigan", net: 1, points: 55.47, games: 23},
+      {name: "Arizona", net: 2, points: 54.72, games: 24},
+      {name: "Duke", net: 3, points: 52.48, games: 24},
+      {name: "Houston", net: 4, points: 51.08, games: 24},
+      {name: "Illinois", net: 5, points: 34.59, games: 25},
+      {name: "Gonzaga", net: 6, points: 37.3, games: 26},
+      {name: "Iowa St.", net: 7, points: 44.66, games: 24},
+      {name: "Connecticut", net: 8, points: 45.9, games: 24},
+      {name: "Purdue", net: 9, points: 38.36, games: 24},
+      {name: "Florida", net: 10, points: 33.35, games: 23},
+      {name: "Michigan St.", net: 11, points: 36.11, games: 24},
+      {name: "Nebraska", net: 12, points: 39.82, games: 24},
+      {name: "Kansas", net: 13, points: 42.46, games: 24},
+      {name: "Louisville", net: 14, points: 30.2, games: 24},
+      {name: "Vanderbilt", net: 15, points: 40.73, games: 24},
+      {name: "Saint Louis", net: 16, points: 26.03, games: 23},
+      {name: "Virginia", net: 17, points: 37.29, games: 24},
+      {name: "BYU", net: 18, points: 32.48, games: 24},
+      {name: "Arkansas", net: 19, points: 31.26, games: 24},
+      {name: "Texas Tech", net: 20, points: 31.76, games: 23},
+      {name: "Iowa", net: 21, points: 22.01, games: 23},
+      {name: "Tennessee", net: 22, points: 22.56, games: 23},
+      {name: "Alabama", net: 23, points: 32.83, games: 23},
+      {name: "Utah St.", net: 24, points: 28.88, games: 23},
+      {name: "St. John's", net: 25, points: 31.46, games: 24},
+      {name: "North Carolina", net: 26, points: 29.16, games: 24},
+      {name: "Kentucky", net: 27, points: 25.43, games: 24},
+      {name: "Saint Mary's", net: 28, points: 18.57, games: 24},
+      {name: "N.C. State", net: 29, points: 27.67, games: 25},
+      {name: "Clemson", net: 30, points: 34.49, games: 24},
+      {name: "Indiana", net: 31, points: 13.61, games: 25},
+      {name: "Auburn", net: 32, points: 14.75, games: 24},
+      {name: "Villanova", net: 33, points: 24.56, games: 24},
+      {name: "SMU", net: 34, points: 21.53, games: 24},
+      {name: "Georgia", net: 35, points: 20.35, games: 23},
+      {name: "Miami FL", net: 36, points: 21.09, games: 24},
+      {name: "Wisconsin", net: 37, points: 19.97, games: 24},
+      {name: "Texas", net: 38, points: 9.54, games: 23},
+      {name: "UCLA", net: 39, points: 16.22, games: 24},
+      {name: "Santa Clara", net: 40, points: 20.97, games: 25},
+      {name: "Ohio St.", net: 41, points: 9.99, games: 23},
+      {name: "Texas A&M", net: 42, points: 21.55, games: 23},
+      {name: "San Diego St.", net: 43, points: 12.08, games: 22},
+      {name: "UCF", net: 44, points: 25.08, games: 23},
+      {name: "New Mexico", net: 45, points: 15.17, games: 23},
+      {name: "Tulsa", net: 46, points: 10.34, games: 22},
+      {name: "Baylor", net: 47, points: 10.2, games: 23},
+      {name: "TCU", net: 48, points: 9.31, games: 24},
+      {name: "USC", net: 49, points: 21.51, games: 23},
+      {name: "VCU", net: 50, points: 14.84, games: 24},
+      {name: "Miami OH", net: 51, points: 18.06, games: 21},
+      {name: "Washington", net: 52, points: 4.31, games: 24},
+      {name: "Seton Hall", net: 53, points: 10.42, games: 24},
+      {name: "Boise St.", net: 54, points: 14.75, games: 22},
+      {name: "Virginia Tech", net: 55, points: 14.89, games: 24},
+      {name: "Nevada", net: 56, points: 9.56, games: 24},
+      {name: "California", net: 57, points: 14.78, games: 23},
+      {name: "Akron", net: 58, points: 3.49, games: 22},
+      {name: "Belmont", net: 59, points: 8.85, games: 25},
+      {name: "West Virginia", net: 60, points: 10.99, games: 24},
+      {name: "Missouri", net: 61, points: 12.97, games: 23},
+      {name: "South Florida", net: 62, points: 0.19, games: 23},
+      {name: "LSU", net: 63, points: -0.73, games: 24},
+      {name: "McNeese St.", net: 64, points: 6.82, games: 23},
+      {name: "Yale", net: 65, points: 1.26, games: 20},
+      {name: "Wake Forest", net: 66, points: -3.28, games: 23},
+      {name: "Oklahoma St.", net: 67, points: 15.92, games: 24},
+      {name: "Stanford", net: 68, points: 7.36, games: 24},
+      {name: "Cincinnati", net: 69, points: -1.48, games: 24},
+      {name: "Grand Canyon", net: 70, points: 2.95, games: 23},
+      {name: "Syracuse", net: 71, points: -5, games: 24},
+      {name: "Colorado", net: 72, points: 4.09, games: 24},
+      {name: "Butler", net: 73, points: -2.06, games: 24},
+      {name: "Arizona St.", net: 74, points: 7.42, games: 25},
+      {name: "Oklahoma", net: 75, points: -0.16, games: 24},
+      {name: "Providence", net: 76, points: -7.97, games: 24},
+      {name: "Northwestern", net: 77, points: -12, games: 24},
+      {name: "Liberty", net: 78, points: 6.04, games: 20},
+      {name: "Creighton", net: 79, points: 1.57, games: 24},
+      {name: "Mississippi", net: 80, points: -2.76, games: 23},
+      {name: "High Point", net: 81, points: -0.98, games: 23},
+      {name: "Utah Valley", net: 82, points: -6.53, games: 21},
+      {name: "Minnesota", net: 83, points: -7.36, games: 24},
+      {name: "Stephen F. Austin", net: 84, points: 5.26, games: 23},
+      {name: "Wichita St.", net: 85, points: -10.15, games: 23},
+      {name: "George Mason", net: 86, points: 5.77, games: 24},
+      {name: "Northern Iowa", net: 87, points: -7.44, games: 24},
+      {name: "Notre Dame", net: 88, points: -6.75, games: 25},
+      {name: "Illinois St.", net: 89, points: -13, games: 24},
+      {name: "Hawaii", net: 90, points: -1.45, games: 20},
+      {name: "Kansas St.", net: 91, points: -3.56, games: 23},
+      {name: "George Washington", net: 92, points: -18.71, games: 24},
+      {name: "Dayton", net: 93, points: -5.76, games: 24},
+      {name: "Georgetown", net: 94, points: 0.19, games: 24},
+      {name: "Florida St.", net: 95, points: -3.47, games: 24},
+      {name: "Murray St.", net: 96, points: -3.18, games: 26},
+      {name: "Xavier", net: 97, points: -2.48, games: 24},
+      {name: "Mississippi St.", net: 98, points: -4.18, games: 23},
+      {name: "UNC Wilmington", net: 99, points: -2.99, games: 22},
+      {name: "Wyoming", net: 100, points: -10.58, games: 23},
+      {name: "Colorado St.", net: 101, points: -3.86, games: 23},
+      {name: "Davidson", net: 102, points: -8.28, games: 22},
+      {name: "Pacific", net: 103, points: -13.55, games: 24},
+      {name: "Memphis", net: 104, points: -10.47, games: 23},
+      {name: "Hofstra", net: 105, points: -18.89, games: 23},
+      {name: "Florida Atlantic", net: 106, points: -12.24, games: 22},
+      {name: "San Francisco", net: 107, points: -12.73, games: 25},
+      {name: "Sam Houston St.", net: 108, points: -15.53, games: 21},
+      {name: "Cal Baptist", net: 109, points: -0.74, games: 24},
+      {name: "St. Thomas", net: 110, points: -7, games: 23},
+      {name: "Marquette", net: 111, points: -22.33, games: 25},
+      {name: "DePaul", net: 112, points: -10.52, games: 24},
+      {name: "Oregon", net: 113, points: -18.18, games: 24},
+      {name: "South Carolina", net: 114, points: -7.96, games: 24},
+      {name: "Troy", net: 115, points: -14.62, games: 23},
+      {name: "East Tennessee St.", net: 116, points: -17.51, games: 23},
+      {name: "UC Irvine", net: 117, points: -13.18, games: 22},
+      {name: "Bradley", net: 118, points: -10.42, games: 25},
+      {name: "William & Mary", net: 119, points: -20.45, games: 22},
+      {name: "Portland St.", net: 120, points: -8.03, games: 19},
+      {name: "UC Santa Barbara", net: 121, points: -17.23, games: 22},
+      {name: "Rhode Island", net: 122, points: -10.06, games: 24},
+      {name: "Winthrop", net: 123, points: -14.55, games: 23},
+      {name: "Pittsburgh", net: 124, points: -19.11, games: 25},
+      {name: "Duquesne", net: 125, points: -15.01, games: 22},
+      {name: "Southern Illinois", net: 126, points: -29.57, games: 24},
+      {name: "UAB", net: 127, points: -17.16, games: 23},
+      {name: "UC San Diego", net: 128, points: -24.51, games: 23},
+      {name: "Utah", net: 129, points: -14.07, games: 24},
+      {name: "Penn St.", net: 130, points: -18.59, games: 24},
+      {name: "Wright St.", net: 131, points: -21.53, games: 23},
+      {name: "North Dakota St.", net: 132, points: -15, games: 23},
+      {name: "Seattle", net: 133, points: -14.42, games: 23},
+      {name: "UT Rio Grande Valley", net: 134, points: -27.77, games: 23},
+      {name: "Washington St.", net: 135, points: -27.49, games: 26},
+      {name: "Oakland", net: 136, points: -18.08, games: 24},
+      {name: "Austin Peay", net: 137, points: -6.99, games: 21},
+      {name: "Fresno St.", net: 138, points: -24.6, games: 23},
+      {name: "UNLV", net: 139, points: -16.98, games: 23},
+      {name: "Marshall", net: 140, points: -21.49, games: 23},
+      {name: "Richmond", net: 141, points: -22.18, games: 24},
+      {name: "Illinois Chicago", net: 142, points: -21.89, games: 23},
+      {name: "St. Bonaventure", net: 143, points: -19.49, games: 23},
+      {name: "Kent St.", net: 144, points: -9.03, games: 22},
+      {name: "UT Arlington", net: 145, points: -17.74, games: 21},
+      {name: "Arkansas St.", net: 146, points: -23.52, games: 23},
+      {name: "Montana St.", net: 147, points: -26.57, games: 22},
+      {name: "Boston College", net: 148, points: -26.78, games: 23},
+      {name: "Temple", net: 149, points: -15.45, games: 22},
+      {name: "Marist", net: 150, points: -22.99, games: 23},
+      {name: "Georgia Tech", net: 151, points: -16.31, games: 24},
+      {name: "Bowling Green", net: 152, points: -27.19, games: 21},
+      {name: "Northern Colorado", net: 153, points: -27.67, games: 22},
+      {name: "Valparaiso", net: 154, points: -19.97, games: 24},
+      {name: "Navy", net: 155, points: -7.99, games: 24},
+      {name: "Harvard", net: 156, points: -22.67, games: 21},
+      {name: "Cornell", net: 157, points: -27.52, games: 19},
+      {name: "Mercer", net: 158, points: -19.53, games: 22},
+      {name: "Saint Joseph's", net: 159, points: -18.57, games: 23},
+      {name: "Loyola Marymount", net: 160, points: -24.99, games: 25},
+      {name: "Maryland", net: 161, points: -12.12, games: 23},
+      {name: "North Texas", net: 162, points: -20.24, games: 22},
+      {name: "Charlotte", net: 163, points: -22.5, games: 23},
+      {name: "Charleston", net: 164, points: -16.21, games: 24},
+      {name: "Montana", net: 165, points: -24.78, games: 21},
+      {name: "UC Davis", net: 166, points: -16.88, games: 22},
+      {name: "Kennesaw St.", net: 167, points: -23.99, games: 20},
+      {name: "Middle Tennessee", net: 168, points: -33.23, games: 20},
+      {name: "Rutgers", net: 169, points: -16.19, games: 24},
+      {name: "Western Kentucky", net: 170, points: -28.21, games: 22},
+      {name: "Idaho", net: 171, points: -32.7, games: 21},
+      {name: "Toledo", net: 172, points: -30.74, games: 22},
+      {name: "Penn", net: 173, points: -24.99, games: 20},
+      {name: "Utah Tech", net: 174, points: -19.01, games: 22},
+      {name: "Appalachian St.", net: 175, points: -23.96, games: 24},
+      {name: "Tennessee Martin", net: 176, points: -11.2, games: 22},
+      {name: "Central Arkansas", net: 177, points: -22.57, games: 23},
+      {name: "Siena", net: 178, points: -23.02, games: 25},
+      {name: "Towson", net: 179, points: -28.76, games: 23},
+      {name: "Lipscomb", net: 180, points: -23.08, games: 23},
+      {name: "Buffalo", net: 181, points: -27.22, games: 22},
+      {name: "Columbia", net: 182, points: -17.06, games: 20},
+      {name: "Drake", net: 183, points: -35.69, games: 24},
+      {name: "New Mexico St.", net: 184, points: -41.73, games: 20},
+      {name: "Robert Morris", net: 185, points: -32.02, games: 24},
+      {name: "South Alabama", net: 186, points: -14.97, games: 22},
+      {name: "Fordham", net: 187, points: -32.71, games: 22},
+      {name: "LIU", net: 188, points: -14.52, games: 24},
+      {name: "Cal St. Northridge", net: 189, points: -20.2, games: 23},
+      {name: "Missouri St.", net: 190, points: -28, games: 20},
+      {name: "Massachusetts", net: 191, points: -28.24, games: 24},
+      {name: "FIU", net: 192, points: -37.06, games: 20},
+      {name: "Furman", net: 193, points: -22.96, games: 22},
+      {name: "Cal St. Fullerton", net: 194, points: -30.75, games: 23},
+      {name: "Elon", net: 195, points: -39.26, games: 23},
+      {name: "Colgate", net: 196, points: -27.56, games: 23},
+      {name: "Jacksonville St.", net: 197, points: -33.71, games: 20},
+      {name: "Merrimack", net: 198, points: -21.54, games: 25},
+      {name: "Northern Kentucky", net: 199, points: -34.5, games: 23},
+      {name: "Texas A&M Corpus Chris", net: 200, points: -28.75, games: 21},
+      {name: "Oregon St.", net: 201, points: -25.66, games: 26},
+      {name: "South Dakota St.", net: 202, points: -41.46, games: 22},
+      {name: "Portland", net: 203, points: -23.65, games: 24},
+      {name: "Monmouth", net: 204, points: -38.53, games: 23},
+      {name: "Quinnipiac", net: 205, points: -16.74, games: 25},
+      {name: "Weber St.", net: 206, points: -38.48, games: 23},
+      {name: "Tulane", net: 207, points: -23.21, games: 22},
+      {name: "Queens", net: 208, points: -21.58, games: 24},
+      {name: "Lamar", net: 209, points: -37.54, games: 23},
+      {name: "Campbell", net: 210, points: -25.76, games: 23},
+      {name: "Tarleton St.", net: 211, points: -32.07, games: 20},
+      {name: "Eastern Michigan", net: 212, points: -41.19, games: 23},
+      {name: "Stony Brook", net: 213, points: -27.5, games: 23},
+      {name: "Drexel", net: 214, points: -40.48, games: 24},
+      {name: "Wofford", net: 215, points: -18.5, games: 23},
+      {name: "Idaho St.", net: 216, points: -46.51, games: 22},
+      {name: "Ohio", net: 217, points: -33.02, games: 23},
+      {name: "Youngstown St.", net: 218, points: -45.14, games: 22},
+      {name: "Indiana St.", net: 219, points: -46.2, games: 23},
+      {name: "Vermont", net: 220, points: -33.48, games: 23},
+      {name: "New Orleans", net: 221, points: -32.44, games: 25},
+      {name: "Southeast Missouri St.", net: 222, points: -30.56, games: 22},
+      {name: "Coastal Carolina", net: 223, points: -33.23, games: 25},
+      {name: "UNC Asheville", net: 224, points: -41.98, games: 21},
+      {name: "Saint Peter's", net: 225, points: -20.03, games: 21},
+      {name: "San Diego", net: 226, points: -39.75, games: 24},
+      {name: "Princeton", net: 227, points: -50.76, games: 22},
+      {name: "Tennessee St.", net: 228, points: -23.04, games: 21},
+      {name: "James Madison", net: 229, points: -40.25, games: 24},
+      {name: "Green Bay", net: 230, points: -30.48, games: 24},
+      {name: "Southern Miss", net: 231, points: -37.51, games: 24},
+      {name: "Dartmouth", net: 232, points: -33.52, games: 19},
+      {name: "Lindenwood", net: 233, points: -29.56, games: 22},
+      {name: "Iona", net: 234, points: -37.01, games: 25},
+      {name: "Bethune Cookman", net: 235, points: -17.63, games: 23},
+      {name: "Samford", net: 236, points: -37.03, games: 23},
+      {name: "Purdue Fort Wayne", net: 237, points: -26.26, games: 22},
+      {name: "Eastern Washington", net: 238, points: -52.54, games: 23},
+      {name: "Fairfield", net: 239, points: -31.51, games: 25},
+      {name: "Howard", net: 240, points: -28.71, games: 21},
+      {name: "Rice", net: 241, points: -41.23, games: 22},
+      {name: "Denver", net: 242, points: -35.97, games: 23},
+      {name: "Radford", net: 243, points: -36, games: 23},
+      {name: "La Salle", net: 244, points: -47.75, games: 23},
+      {name: "Florida Gulf Coast", net: 245, points: -52.56, games: 23},
+      {name: "Sacramento St.", net: 246, points: -37.03, games: 20},
+      {name: "Milwaukee", net: 247, points: -51.06, games: 26},
+      {name: "Charleston Southern", net: 248, points: -49.49, games: 22},
+      {name: "Hampton", net: 249, points: -46.51, games: 23},
+      {name: "Long Beach St.", net: 250, points: -48.5, games: 22},
+      {name: "Abilene Christian", net: 251, points: -40.51, games: 20},
+      {name: "Louisiana Tech", net: 252, points: -31.51, games: 20},
+      {name: "SIU Edwardsville", net: 253, points: -32.02, games: 22},
+      {name: "Texas St.", net: 254, points: -36.99, games: 24},
+      {name: "Nicholls St.", net: 255, points: -42.25, games: 24},
+      {name: "American", net: 256, points: -36.05, games: 23},
+      {name: "Cal Poly", net: 257, points: -51.96, games: 23},
+      {name: "Georgia Southern", net: 258, points: -41.49, games: 23},
+      {name: "Old Dominion", net: 259, points: -55, games: 24},
+      {name: "Nebraska Omaha", net: 260, points: -43.2, games: 22},
+      {name: "Detroit Mercy", net: 261, points: -43.5, games: 21},
+      {name: "Northeastern", net: 262, points: -59.52, games: 23},
+      {name: "UMBC", net: 263, points: -19.99, games: 20},
+      {name: "San Jose St.", net: 264, points: -35.54, games: 23},
+      {name: "Eastern Kentucky", net: 265, points: -55.99, games: 23},
+      {name: "Presbyterian", net: 266, points: -43.02, games: 22},
+      {name: "Longwood", net: 267, points: -42.49, games: 23},
+      {name: "South Dakota", net: 268, points: -30.97, games: 23},
+      {name: "North Carolina A&T", net: 269, points: -50.97, games: 21},
+      {name: "Morehead St.", net: 270, points: -33.54, games: 22},
+      {name: "UTEP", net: 271, points: -50.48, games: 21},
+      {name: "Grambling St.", net: 272, points: -40.03, games: 21},
+      {name: "Incarnate Word", net: 273, points: -41.74, games: 22},
+      {name: "Georgia St.", net: 274, points: -58.54, games: 23},
+      {name: "North Dakota", net: 275, points: -40.74, games: 24},
+      {name: "Central Connecticut", net: 276, points: -36.52, games: 21},
+      {name: "Bellarmine", net: 277, points: -41.51, games: 22},
+      {name: "East Texas A&M", net: 278, points: -50.56, games: 24},
+      {name: "Western Carolina", net: 279, points: -45.79, games: 21},
+      {name: "Southeastern Louisiana", net: 280, points: -50.98, games: 24},
+      {name: "East Carolina", net: 281, points: -51.26, games: 22},
+      {name: "Evansville", net: 282, points: -60.96, games: 23},
+      {name: "Le Moyne", net: 283, points: -47.51, games: 24},
+      {name: "USC Upstate", net: 284, points: -45.51, games: 22},
+      {name: "Southern", net: 285, points: -34.58, games: 21},
+      {name: "Pepperdine", net: 286, points: -57.07, games: 23},
+      {name: "UC Riverside", net: 287, points: -53.53, games: 23},
+      {name: "Mercyhurst", net: 288, points: -40.04, games: 23},
+      {name: "Delaware", net: 289, points: -56.72, games: 22},
+      {name: "Southern Utah", net: 290, points: -49.03, games: 21},
+      {name: "Brown", net: 291, points: -49.49, games: 19},
+      {name: "Boston University", net: 292, points: -57.98, games: 24},
+      {name: "Arkansas Pine Bluff", net: 293, points: -30.11, games: 22},
+      {name: "Western Michigan", net: 294, points: -45.58, games: 21},
+      {name: "Chattanooga", net: 295, points: -58.54, games: 22},
+      {name: "Cleveland St.", net: 296, points: -52.22, games: 22},
+      {name: "Houston Christian", net: 297, points: -57.5, games: 23},
+      {name: "Sacred Heart", net: 298, points: -60.5, games: 25},
+      {name: "Northern Illinois", net: 299, points: -44.04, games: 20},
+      {name: "Northwestern St.", net: 300, points: -61.56, games: 23},
+      {name: "Mount St. Mary's", net: 301, points: -51.56, games: 25},
+      {name: "Northern Arizona", net: 302, points: -57.02, games: 22},
+      {name: "Jacksonville", net: 303, points: -53.51, games: 23},
+      {name: "UNC Greensboro", net: 304, points: -52.49, games: 23},
+      {name: "Central Michigan", net: 305, points: -56.56, games: 22},
+      {name: "Lehigh", net: 306, points: -57.54, games: 23},
+      {name: "Alabama A&M", net: 307, points: -37.03, games: 21},
+      {name: "NJIT", net: 308, points: -34.05, games: 24},
+      {name: "Loyola Chicago", net: 309, points: -58.35, games: 25},
+      {name: "West Georgia", net: 310, points: -44.28, games: 22},
+      {name: "Little Rock", net: 311, points: -57.99, games: 23},
+      {name: "Louisiana", net: 312, points: -56.56, games: 25},
+      {name: "IU Indy", net: 313, points: -74.56, games: 24},
+      {name: "Norfolk St.", net: 314, points: -50.53, games: 21},
+      {name: "Lafayette", net: 315, points: -66.54, games: 24},
+      {name: "Cal St. Bakersfield", net: 316, points: -52.96, games: 23},
+      {name: "Tennessee Tech", net: 317, points: -59.04, games: 22},
+      {name: "Ball St.", net: 318, points: -55.03, games: 21},
+      {name: "Eastern Illinois", net: 319, points: -56.55, games: 23},
+      {name: "Holy Cross", net: 320, points: -62, games: 23},
+      {name: "Alabama St.", net: 321, points: -53.77, games: 23},
+      {name: "Wagner", net: 322, points: -54.53, games: 19},
+      {name: "Fairleigh Dickinson", net: 323, points: -60.02, games: 22},
+      {name: "New Hampshire", net: 324, points: -45.04, games: 20},
+      {name: "Prairie View A&M", net: 325, points: -50.57, games: 20},
+      {name: "Texas Southern", net: 326, points: -51.57, games: 20},
+      {name: "Army", net: 327, points: -58.01, games: 23},
+      {name: "UMass Lowell", net: 328, points: -52.55, games: 22},
+      {name: "Manhattan", net: 329, points: -58.03, games: 25},
+      {name: "Florida A&M", net: 330, points: -42.58, games: 20},
+      {name: "Albany", net: 331, points: -60.95, games: 22},
+      {name: "Stetson", net: 332, points: -58.04, games: 23},
+      {name: "Loyola MD", net: 333, points: -63.5, games: 23},
+      {name: "New Haven", net: 334, points: -50.56, games: 21},
+      {name: "Stonehill", net: 335, points: -59.52, games: 23},
+      {name: "Oral Roberts", net: 336, points: -68.02, games: 22},
+      {name: "Bucknell", net: 337, points: -63.05, games: 26},
+      {name: "North Carolina Central", net: 338, points: -38.56, games: 18},
+      {name: "North Florida", net: 339, points: -69.07, games: 23},
+      {name: "North Alabama", net: 340, points: -62.73, games: 21},
+      {name: "Maine", net: 341, points: -78.51, games: 24},
+      {name: "Maryland Eastern Shore", net: 342, points: -58.09, games: 23},
+      {name: "The Citadel", net: 343, points: -61.97, games: 22},
+      {name: "Air Force", net: 344, points: -60.55, games: 24},
+      {name: "Niagara", net: 345, points: -70.53, games: 23},
+      {name: "Canisius", net: 346, points: -62.46, games: 24},
+      {name: "Chicago St.", net: 347, points: -69.05, games: 24},
+      {name: "Southern Indiana", net: 348, points: -83.02, games: 22},
+      {name: "Bryant", net: 349, points: -60.03, games: 22},
+      {name: "Jackson St.", net: 350, points: -51.61, games: 24},
+      {name: "UTSA", net: 351, points: -67.06, games: 21},
+      {name: "Alcorn St.", net: 352, points: -58.55, games: 23},
+      {name: "Saint Francis", net: 353, points: -67.04, games: 22},
+      {name: "UMKC", net: 354, points: -72.56, games: 21},
+      {name: "Morgan St.", net: 355, points: -46.99, games: 20},
+      {name: "Louisiana Monroe", net: 356, points: -84.98, games: 23},
+      {name: "Rider", net: 357, points: -76.08, games: 22},
+      {name: "VMI", net: 358, points: -75.53, games: 22},
+      {name: "South Carolina St.", net: 359, points: -60.04, games: 21},
+      {name: "Western Illinois", net: 360, points: -92.01, games: 23},
+      {name: "Delaware St.", net: 361, points: -65.54, games: 19},
+      {name: "Binghamton", net: 362, points: -88, games: 22},
+      {name: "Gardner Webb", net: 363, points: -76.49, games: 22},
+      {name: "Coppin St.", net: 364, points: -80.54, games: 24},
+      {name: "Mississippi Valley St.", net: 365, points: -87.01, games: 23}
+    ];
+    const initialGames = [
+      {away: "Vermont", home: "Binghamton", date: "2/12/26"},
+      {away: "UMBC", home: "Maine", date: "2/12/26"},
+      {away: "Bryant", home: "UMass Lowell", date: "2/12/26"},
+      {away: "NJIT", home: "New Hampshire", date: "2/12/26"},
+      {away: "Albany", home: "Binghamton", date: "2/14/26"},
+      {away: "NJIT", home: "Maine", date: "2/14/26"},
+      {away: "UMBC", home: "New Hampshire", date: "2/14/26"},
+      {away: "Bryant", home: "Vermont", date: "2/14/26"},
+      {away: "Binghamton", home: "Bryant", date: "2/19/26"},
+      {away: "Vermont", home: "UMBC", date: "2/19/26"},
+      {away: "New Hampshire", home: "UMass Lowell", date: "2/19/26"},
+      {away: "Albany", home: "NJIT", date: "2/19/26"},
+      {away: "Albany", home: "UMBC", date: "2/21/26"},
+      {away: "Binghamton", home: "UMass Lowell", date: "2/21/26"},
+      {away: "Maine", home: "New Hampshire", date: "2/21/26"},
+      {away: "Vermont", home: "NJIT", date: "2/21/26"},
+      {away: "Maine", home: "Albany", date: "2/26/26"},
+      {away: "New Hampshire", home: "Binghamton", date: "2/26/26"},
+      {away: "Bryant", home: "UMBC", date: "2/26/26"},
+      {away: "UMass Lowell", home: "Vermont", date: "2/26/26"},
+      {away: "New Hampshire", home: "Albany", date: "2/28/26"},
+      {away: "Maine", home: "Binghamton", date: "2/28/26"},
+      {away: "NJIT", home: "Bryant", date: "2/28/26"},
+      {away: "UMBC", home: "UMass Lowell", date: "2/28/26"},
+      {away: "UMass Lowell", home: "Maine", date: "3/3/26"},
+      {away: "Bryant", home: "New Hampshire", date: "3/3/26"},
+      {away: "UMBC", home: "NJIT", date: "3/3/26"},
+      {away: "Albany", home: "Vermont", date: "3/3/26"},
+      {away: "UTSA", home: "East Carolina", date: "2/11/26"},
+      {away: "Florida Atlantic", home: "Rice", date: "2/11/26"},
+      {away: "Temple", home: "Tulane", date: "2/11/26"},
+      {away: "UAB", home: "Tulsa", date: "2/11/26"},
+      {away: "South Florida", home: "Wichita St.", date: "2/11/26"},
+      {away: "Memphis", home: "North Texas", date: "2/12/26"},
+      {away: "East Carolina", home: "Rice", date: "2/14/26"},
+      {away: "Tulsa", home: "Wichita St.", date: "2/14/26"},
+      {away: "UTSA", home: "Charlotte", date: "2/15/26"},
+      {away: "South Florida", home: "Florida Atlantic", date: "2/15/26"},
+      {away: "North Texas", home: "Temple", date: "2/15/26"},
+      {away: "Tulane", home: "UAB", date: "2/15/26"},
+      {away: "Wichita St.", home: "East Carolina", date: "2/18/26"},
+      {away: "UAB", home: "Temple", date: "2/18/26"},
+      {away: "Charlotte", home: "Tulsa", date: "2/18/26"},
+      {away: "Florida Atlantic", home: "UTSA", date: "2/18/26"},
+      {away: "Memphis", home: "South Florida", date: "2/19/26"},
+      {away: "East Carolina", home: "Charlotte", date: "2/21/26"},
+      {away: "Temple", home: "Wichita St.", date: "2/21/26"},
+      {away: "UAB", home: "Memphis", date: "2/22/26"},
+      {away: "Rice", home: "Tulane", date: "2/22/26"},
+      {away: "UTSA", home: "Tulsa", date: "2/22/26"},
+      {away: "North Texas", home: "Charlotte", date: "2/25/26"},
+      {away: "Temple", home: "Florida Atlantic", date: "2/25/26"},
+      {away: "South Florida", home: "Rice", date: "2/25/26"},
+      {away: "Tulsa", home: "Tulane", date: "2/25/26"},
+      {away: "East Carolina", home: "UTSA", date: "2/25/26"},
+      {away: "Wichita St.", home: "Memphis", date: "2/26/26"},
+      {away: "Memphis", home: "East Carolina", date: "3/1/26"},
+      {away: "Charlotte", home: "Florida Atlantic", date: "3/1/26"},
+      {away: "Tulane", home: "South Florida", date: "3/1/26"},
+      {away: "Rice", home: "Temple", date: "3/1/26"},
+      {away: "North Texas", home: "UAB", date: "3/1/26"},
+      {away: "Wichita St.", home: "UTSA", date: "3/1/26"},
+      {away: "UAB", home: "Charlotte", date: "3/4/26"},
+      {away: "Rice", home: "North Texas", date: "3/4/26"},
+      {away: "Tulsa", home: "East Carolina", date: "3/5/26"},
+      {away: "South Florida", home: "Memphis", date: "3/5/26"},
+      {away: "Tulane", home: "Temple", date: "3/5/26"},
+      {away: "Florida Atlantic", home: "Wichita St.", date: "3/7/26"},
+      {away: "UTSA", home: "Rice", date: "3/8/26"},
+      {away: "Charlotte", home: "South Florida", date: "3/8/26"},
+      {away: "Memphis", home: "Tulane", date: "3/8/26"},
+      {away: "Temple", home: "Tulsa", date: "3/8/26"},
+      {away: "East Carolina", home: "UAB", date: "3/8/26"},
+      {away: "Bellarmine", home: "Central Arkansas", date: "2/11/26"},
+      {away: "North Florida", home: "Florida Gulf Coast", date: "2/11/26"},
+      {away: "Eastern Kentucky", home: "Lipscomb", date: "2/11/26"},
+      {away: "West Georgia", home: "North Alabama", date: "2/11/26"},
+      {away: "Austin Peay", home: "Queens", date: "2/11/26"},
+      {away: "Jacksonville", home: "Stetson", date: "2/11/26"},
+      {away: "Bellarmine", home: "Austin Peay", date: "2/14/26"},
+      {away: "West Georgia", home: "Central Arkansas", date: "2/14/26"},
+      {away: "Stetson", home: "Florida Gulf Coast", date: "2/14/26"},
+      {away: "North Florida", home: "Jacksonville", date: "2/14/26"},
+      {away: "Lipscomb", home: "Queens", date: "2/14/26"},
+      {away: "Eastern Kentucky", home: "North Alabama", date: "2/15/26"},
+      {away: "Lipscomb", home: "Bellarmine", date: "2/18/26"},
+      {away: "West Georgia", home: "Eastern Kentucky", date: "2/18/26"},
+      {away: "Queens", home: "North Alabama", date: "2/18/26"},
+      {away: "Jacksonville", home: "Florida Gulf Coast", date: "2/19/26"},
+      {away: "Austin Peay", home: "North Florida", date: "2/19/26"},
+      {away: "Central Arkansas", home: "Stetson", date: "2/19/26"},
+      {away: "Eastern Kentucky", home: "Bellarmine", date: "2/21/26"},
+      {away: "Central Arkansas", home: "Florida Gulf Coast", date: "2/21/26"},
+      {away: "Austin Peay", home: "Jacksonville", date: "2/21/26"},
+      {away: "North Alabama", home: "Lipscomb", date: "2/21/26"},
+      {away: "West Georgia", home: "Queens", date: "2/21/26"},
+      {away: "North Florida", home: "Stetson", date: "2/21/26"},
+      {away: "Central Arkansas", home: "Austin Peay", date: "2/25/26"},
+      {away: "Queens", home: "Eastern Kentucky", date: "2/25/26"},
+      {away: "Bellarmine", home: "North Alabama", date: "2/25/26"},
+      {away: "Lipscomb", home: "West Georgia", date: "2/25/26"},
+      {away: "Stetson", home: "Jacksonville", date: "2/26/26"},
+      {away: "Florida Gulf Coast", home: "North Florida", date: "2/26/26"},
+      {away: "Austin Peay", home: "Bellarmine", date: "2/28/26"},
+      {away: "Queens", home: "Central Arkansas", date: "2/28/26"},
+      {away: "Lipscomb", home: "Eastern Kentucky", date: "2/28/26"},
+      {away: "Jacksonville", home: "North Florida", date: "2/28/26"},
+      {away: "Florida Gulf Coast", home: "Stetson", date: "2/28/26"},
+      {away: "North Alabama", home: "West Georgia", date: "2/28/26"},
+      {away: "Rhode Island", home: "George Washington", date: "2/10/26"},
+      {away: "George Mason", home: "Richmond", date: "2/10/26"},
+      {away: "Fordham", home: "Saint Joseph's", date: "2/10/26"},
+      {away: "VCU", home: "La Salle", date: "2/11/26"},
+      {away: "George Mason", home: "George Washington", date: "2/13/26"},
+      {away: "Saint Louis", home: "Loyola Chicago", date: "2/13/26"},
+      {away: "Fordham", home: "Rhode Island", date: "2/14/26"},
+      {away: "VCU", home: "Richmond", date: "2/14/26"},
+      {away: "Duquesne", home: "St. Bonaventure", date: "2/14/26"},
+      {away: "Davidson", home: "Dayton", date: "2/15/26"},
+      {away: "Saint Louis", home: "Rhode Island", date: "2/17/26"},
+      {away: "George Washington", home: "VCU", date: "2/17/26"},
+      {away: "Richmond", home: "Davidson", date: "2/18/26"},
+      {away: "La Salle", home: "Duquesne", date: "2/18/26"},
+      {away: "Loyola Chicago", home: "Fordham", date: "2/18/26"},
+      {away: "Dayton", home: "George Mason", date: "2/18/26"},
+      {away: "Saint Joseph's", home: "St. Bonaventure", date: "2/18/26"},
+      {away: "VCU", home: "Saint Louis", date: "2/20/26"},
+      {away: "Duquesne", home: "Dayton", date: "2/21/26"},
+      {away: "Davidson", home: "Fordham", date: "2/21/26"},
+      {away: "Rhode Island", home: "La Salle", date: "2/21/26"},
+      {away: "St. Bonaventure", home: "Richmond", date: "2/21/26"},
+      {away: "Loyola Chicago", home: "Saint Joseph's", date: "2/21/26"},
+      {away: "Saint Louis", home: "Dayton", date: "2/24/26"},
+      {away: "George Washington", home: "La Salle", date: "2/24/26"},
+      {away: "Davidson", home: "Duquesne", date: "2/25/26"},
+      {away: "George Mason", home: "Saint Joseph's", date: "2/25/26"},
+      {away: "Rhode Island", home: "St. Bonaventure", date: "2/25/26"},
+      {away: "Dayton", home: "George Washington", date: "2/27/26"},
+      {away: "St. Bonaventure", home: "George Mason", date: "2/28/26"},
+      {away: "Richmond", home: "Loyola Chicago", date: "2/28/26"},
+      {away: "Saint Joseph's", home: "Rhode Island", date: "2/28/26"},
+      {away: "Duquesne", home: "Saint Louis", date: "2/28/26"},
+      {away: "Fordham", home: "VCU", date: "2/28/26"},
+      {away: "La Salle", home: "Davidson", date: "3/1/26"},
+      {away: "Dayton", home: "Richmond", date: "3/3/26"},
+      {away: "George Mason", home: "VCU", date: "3/3/26"},
+      {away: "Saint Joseph's", home: "Davidson", date: "3/4/26"},
+      {away: "St. Bonaventure", home: "George Washington", date: "3/4/26"},
+      {away: "Fordham", home: "La Salle", date: "3/4/26"},
+      {away: "Duquesne", home: "Rhode Island", date: "3/4/26"},
+      {away: "Loyola Chicago", home: "Saint Louis", date: "3/4/26"},
+      {away: "VCU", home: "Dayton", date: "3/6/26"},
+      {away: "Richmond", home: "Duquesne", date: "3/7/26"},
+      {away: "Rhode Island", home: "Fordham", date: "3/7/26"},
+      {away: "Saint Louis", home: "George Mason", date: "3/7/26"},
+      {away: "George Washington", home: "Loyola Chicago", date: "3/7/26"},
+      {away: "La Salle", home: "Saint Joseph's", date: "3/7/26"},
+      {away: "Davidson", home: "St. Bonaventure", date: "3/7/26"},
+      {away: "North Carolina", home: "Miami FL", date: "2/10/26"},
+      {away: "Duke", home: "Pittsburgh", date: "2/10/26"},
+      {away: "Notre Dame", home: "SMU", date: "2/10/26"},
+      {away: "Stanford", home: "Boston College", date: "2/11/26"},
+      {away: "Virginia Tech", home: "Clemson", date: "2/11/26"},
+      {away: "Wake Forest", home: "Georgia Tech", date: "2/11/26"},
+      {away: "California", home: "Syracuse", date: "2/11/26"},
+      {away: "California", home: "Boston College", date: "2/14/26"},
+      {away: "Clemson", home: "Duke", date: "2/14/26"},
+      {away: "Miami FL", home: "N.C. State", date: "2/14/26"},
+      {away: "Pittsburgh", home: "North Carolina", date: "2/14/26"},
+      {away: "Georgia Tech", home: "Notre Dame", date: "2/14/26"},
+      {away: "SMU", home: "Syracuse", date: "2/14/26"},
+      {away: "Florida St.", home: "Virginia Tech", date: "2/14/26"},
+      {away: "Stanford", home: "Wake Forest", date: "2/14/26"},
+      {away: "Syracuse", home: "Duke", date: "2/16/26"},
+      {away: "Boston College", home: "Florida St.", date: "2/17/26"},
+      {away: "Virginia Tech", home: "Miami FL", date: "2/17/26"},
+      {away: "North Carolina", home: "N.C. State", date: "2/17/26"},
+      {away: "Louisville", home: "SMU", date: "2/17/26"},
+      {away: "Virginia", home: "Georgia Tech", date: "2/18/26"},
+      {away: "Clemson", home: "Wake Forest", date: "2/18/26"},
+      {away: "Stanford", home: "California", date: "2/21/26"},
+      {away: "Florida St.", home: "Clemson", date: "2/21/26"},
+      {away: "Georgia Tech", home: "Louisville", date: "2/21/26"},
+      {away: "Notre Dame", home: "Pittsburgh", date: "2/21/26"},
+      {away: "Boston College", home: "SMU", date: "2/21/26"},
+      {away: "North Carolina", home: "Syracuse", date: "2/21/26"},
+      {away: "Miami FL", home: "Virginia", date: "2/21/26"},
+      {away: "Wake Forest", home: "Virginia Tech", date: "2/21/26"},
+      {away: "Louisville", home: "North Carolina", date: "2/23/26"},
+      {away: "Wake Forest", home: "Boston College", date: "2/24/26"},
+      {away: "Miami FL", home: "Florida St.", date: "2/24/26"},
+      {away: "Duke", home: "Notre Dame", date: "2/24/26"},
+      {away: "N.C. State", home: "Virginia", date: "2/24/26"},
+      {away: "SMU", home: "California", date: "2/25/26"},
+      {away: "Pittsburgh", home: "Stanford", date: "2/25/26"},
+      {away: "Pittsburgh", home: "California", date: "2/28/26"},
+      {away: "Louisville", home: "Clemson", date: "2/28/26"},
+      {away: "Virginia", home: "Duke", date: "2/28/26"},
+      {away: "Florida St.", home: "Georgia Tech", date: "2/28/26"},
+      {away: "Boston College", home: "Miami FL", date: "2/28/26"},
+      {away: "Virginia Tech", home: "North Carolina", date: "2/28/26"},
+      {away: "N.C. State", home: "Notre Dame", date: "2/28/26"},
+      {away: "SMU", home: "Stanford", date: "2/28/26"},
+      {away: "Syracuse", home: "Wake Forest", date: "2/28/26"},
+      {away: "Duke", home: "N.C. State", date: "3/2/26"},
+      {away: "Syracuse", home: "Louisville", date: "3/3/26"},
+      {away: "Clemson", home: "North Carolina", date: "3/3/26"},
+      {away: "Wake Forest", home: "Virginia", date: "3/3/26"},
+      {away: "Boston College", home: "Virginia Tech", date: "3/3/26"},
+      {away: "California", home: "Georgia Tech", date: "3/4/26"},
+      {away: "Stanford", home: "Notre Dame", date: "3/4/26"},
+      {away: "Florida St.", home: "Pittsburgh", date: "3/4/26"},
+      {away: "Miami FL", home: "SMU", date: "3/4/26"},
+      {away: "Notre Dame", home: "Boston College", date: "3/7/26"},
+      {away: "Georgia Tech", home: "Clemson", date: "3/7/26"},
+      {away: "North Carolina", home: "Duke", date: "3/7/26"},
+      {away: "SMU", home: "Florida St.", date: "3/7/26"},
+      {away: "Louisville", home: "Miami FL", date: "3/7/26"},
+      {away: "Stanford", home: "N.C. State", date: "3/7/26"},
+      {away: "Pittsburgh", home: "Syracuse", date: "3/7/26"},
+      {away: "Virginia Tech", home: "Virginia", date: "3/7/26"},
+      {away: "California", home: "Wake Forest", date: "3/7/26"},
+      {away: "Virginia", home: "Florida St.", date: "2/10/26"},
+      {away: "Oklahoma St.", home: "Arizona St.", date: "2/10/26"},
+      {away: "BYU", home: "Baylor", date: "2/10/26"},
+      {away: "Iowa St.", home: "TCU", date: "2/10/26"},
+      {away: "Houston", home: "Utah", date: "2/10/26"},
+      {away: "Cincinnati", home: "Kansas St.", date: "2/11/26"},
+      {away: "Colorado", home: "Texas Tech", date: "2/11/26"},
+      {away: "Texas Tech", home: "Arizona", date: "2/14/26"},
+      {away: "Colorado", home: "BYU", date: "2/14/26"},
+      {away: "Kansas St.", home: "Houston", date: "2/14/26"},
+      {away: "Kansas", home: "Iowa St.", date: "2/14/26"},
+      {away: "TCU", home: "Oklahoma St.", date: "2/14/26"},
+      {away: "West Virginia", home: "UCF", date: "2/14/26"},
+      {away: "Utah", home: "Cincinnati", date: "2/15/26"},
+      {away: "Houston", home: "Iowa St.", date: "2/16/26"},
+      {away: "Texas Tech", home: "Arizona St.", date: "2/17/26"},
+      {away: "Baylor", home: "Kansas St.", date: "2/17/26"},
+      {away: "TCU", home: "UCF", date: "2/17/26"},
+      {away: "BYU", home: "Arizona", date: "2/18/26"},
+      {away: "Kansas", home: "Oklahoma St.", date: "2/18/26"},
+      {away: "Utah", home: "West Virginia", date: "2/18/26"},
+      {away: "Arizona St.", home: "Baylor", date: "2/21/26"},
+      {away: "Iowa St.", home: "BYU", date: "2/21/26"},
+      {away: "Oklahoma St.", home: "Colorado", date: "2/21/26"},
+      {away: "Arizona", home: "Houston", date: "2/21/26"},
+      {away: "Cincinnati", home: "Kansas", date: "2/21/26"},
+      {away: "West Virginia", home: "TCU", date: "2/21/26"},
+      {away: "Kansas St.", home: "Texas Tech", date: "2/21/26"},
+      {away: "UCF", home: "Utah", date: "2/21/26"},
+      {away: "Houston", home: "Kansas", date: "2/23/26"},
+      {away: "Arizona", home: "Baylor", date: "2/24/26"},
+      {away: "UCF", home: "BYU", date: "2/24/26"},
+      {away: "West Virginia", home: "Oklahoma St.", date: "2/24/26"},
+      {away: "Arizona St.", home: "TCU", date: "2/24/26"},
+      {away: "Cincinnati", home: "Texas Tech", date: "2/24/26"},
+      {away: "Iowa St.", home: "Utah", date: "2/24/26"},
+      {away: "Kansas St.", home: "Colorado", date: "2/25/26"},
+      {away: "Kansas", home: "Arizona", date: "2/28/26"},
+      {away: "Utah", home: "Arizona St.", date: "2/28/26"},
+      {away: "Oklahoma St.", home: "Cincinnati", date: "2/28/26"},
+      {away: "Colorado", home: "Houston", date: "2/28/26"},
+      {away: "Texas Tech", home: "Iowa St.", date: "2/28/26"},
+      {away: "TCU", home: "Kansas St.", date: "2/28/26"},
+      {away: "Baylor", home: "UCF", date: "2/28/26"},
+      {away: "BYU", home: "West Virginia", date: "2/28/26"},
+      {away: "Iowa St.", home: "Arizona", date: "3/2/26"},
+      {away: "Kansas", home: "Arizona St.", date: "3/3/26"},
+      {away: "BYU", home: "Cincinnati", date: "3/3/26"},
+      {away: "West Virginia", home: "Kansas St.", date: "3/3/26"},
+      {away: "TCU", home: "Texas Tech", date: "3/3/26"},
+      {away: "Oklahoma St.", home: "UCF", date: "3/3/26"},
+      {away: "Colorado", home: "Utah", date: "3/3/26"},
+      {away: "Baylor", home: "Houston", date: "3/4/26"},
+      {away: "UCF", home: "West Virginia", date: "3/6/26"},
+      {away: "Utah", home: "Baylor", date: "3/7/26"},
+      {away: "Texas Tech", home: "BYU", date: "3/7/26"},
+      {away: "Arizona", home: "Colorado", date: "3/7/26"},
+      {away: "Arizona St.", home: "Iowa St.", date: "3/7/26"},
+      {away: "Kansas St.", home: "Kansas", date: "3/7/26"},
+      {away: "Houston", home: "Oklahoma St.", date: "3/7/26"},
+      {away: "Cincinnati", home: "TCU", date: "3/7/26"},
+      {away: "Marquette", home: "Villanova", date: "2/10/26"},
+      {away: "Connecticut", home: "Butler", date: "2/11/26"},
+      {away: "Creighton", home: "DePaul", date: "2/11/26"},
+      {away: "Providence", home: "Seton Hall", date: "2/11/26"},
+      {away: "Georgetown", home: "Connecticut", date: "2/14/26"},
+      {away: "Villanova", home: "Creighton", date: "2/14/26"},
+      {away: "St. John's", home: "Providence", date: "2/14/26"},
+      {away: "Marquette", home: "Xavier", date: "2/14/26"},
+      {away: "Seton Hall", home: "Butler", date: "2/15/26"},
+      {away: "Villanova", home: "Xavier", date: "2/17/26"},
+      {away: "Creighton", home: "Connecticut", date: "2/18/26"},
+      {away: "Butler", home: "Georgetown", date: "2/18/26"},
+      {away: "St. John's", home: "Marquette", date: "2/18/26"},
+      {away: "DePaul", home: "Seton Hall", date: "2/18/26"},
+      {away: "Xavier", home: "Butler", date: "2/21/26"},
+      {away: "Providence", home: "DePaul", date: "2/21/26"},
+      {away: "Georgetown", home: "Seton Hall", date: "2/21/26"},
+      {away: "Creighton", home: "St. John's", date: "2/21/26"},
+      {away: "Connecticut", home: "Villanova", date: "2/21/26"},
+      {away: "Marquette", home: "Georgetown", date: "2/24/26"},
+      {away: "Xavier", home: "Providence", date: "2/24/26"},
+      {away: "St. John's", home: "Connecticut", date: "2/25/26"},
+      {away: "DePaul", home: "Creighton", date: "2/25/26"},
+      {away: "Butler", home: "Villanova", date: "2/25/26"},
+      {away: "Seton Hall", home: "Connecticut", date: "2/28/26"},
+      {away: "Providence", home: "Creighton", date: "2/28/26"},
+      {away: "Villanova", home: "St. John's", date: "2/28/26"},
+      {away: "Georgetown", home: "Xavier", date: "2/28/26"},
+      {away: "DePaul", home: "Marquette", date: "3/1/26"},
+      {away: "Georgetown", home: "St. John's", date: "3/3/26"},
+      {away: "Seton Hall", home: "Xavier", date: "3/3/26"},
+      {away: "Creighton", home: "Butler", date: "3/4/26"},
+      {away: "Villanova", home: "DePaul", date: "3/4/26"},
+      {away: "Marquette", home: "Providence", date: "3/4/26"},
+      {away: "St. John's", home: "Seton Hall", date: "3/6/26"},
+      {away: "Butler", home: "DePaul", date: "3/7/26"},
+      {away: "Providence", home: "Georgetown", date: "3/7/26"},
+      {away: "Connecticut", home: "Marquette", date: "3/7/26"},
+      {away: "Xavier", home: "Villanova", date: "3/7/26"},
+      {away: "Idaho St.", home: "Eastern Washington", date: "2/12/26"},
+      {away: "Weber St.", home: "Idaho", date: "2/12/26"},
+      {away: "Portland St.", home: "Northern Arizona", date: "2/12/26"},
+      {away: "Sacramento St.", home: "Northern Colorado", date: "2/12/26"},
+      {away: "Weber St.", home: "Eastern Washington", date: "2/14/26"},
+      {away: "Idaho St.", home: "Idaho", date: "2/14/26"},
+      {away: "Montana St.", home: "Montana", date: "2/14/26"},
+      {away: "Sacramento St.", home: "Northern Arizona", date: "2/14/26"},
+      {away: "Portland St.", home: "Northern Colorado", date: "2/14/26"},
+      {away: "Montana", home: "Idaho St.", date: "2/19/26"},
+      {away: "Idaho", home: "Portland St.", date: "2/19/26"},
+      {away: "Eastern Washington", home: "Sacramento St.", date: "2/19/26"},
+      {away: "Montana St.", home: "Weber St.", date: "2/19/26"},
+      {away: "Montana St.", home: "Idaho St.", date: "2/21/26"},
+      {away: "Northern Arizona", home: "Northern Colorado", date: "2/21/26"},
+      {away: "Eastern Washington", home: "Portland St.", date: "2/21/26"},
+      {away: "Idaho", home: "Sacramento St.", date: "2/21/26"},
+      {away: "Montana", home: "Weber St.", date: "2/21/26"},
+      {away: "Northern Colorado", home: "Eastern Washington", date: "2/26/26"},
+      {away: "Northern Arizona", home: "Idaho", date: "2/26/26"},
+      {away: "Sacramento St.", home: "Montana", date: "2/26/26"},
+      {away: "Portland St.", home: "Montana St.", date: "2/26/26"},
+      {away: "Northern Arizona", home: "Eastern Washington", date: "2/28/26"},
+      {away: "Northern Colorado", home: "Idaho", date: "2/28/26"},
+      {away: "Weber St.", home: "Idaho St.", date: "2/28/26"},
+      {away: "Portland St.", home: "Montana", date: "2/28/26"},
+      {away: "Sacramento St.", home: "Montana St.", date: "2/28/26"},
+      {away: "Idaho", home: "Eastern Washington", date: "3/2/26"},
+      {away: "Montana St.", home: "Northern Arizona", date: "3/2/26"},
+      {away: "Montana", home: "Northern Colorado", date: "3/2/26"},
+      {away: "Weber St.", home: "Portland St.", date: "3/2/26"},
+      {away: "Idaho St.", home: "Sacramento St.", date: "3/2/26"},
+      {away: "Presbyterian", home: "Charleston Southern", date: "2/12/26"},
+      {away: "Winthrop", home: "Gardner Webb", date: "2/12/26"},
+      {away: "UNC Asheville", home: "Longwood", date: "2/12/26"},
+      {away: "High Point", home: "USC Upstate", date: "2/12/26"},
+      {away: "Gardner Webb", home: "High Point", date: "2/14/26"},
+      {away: "USC Upstate", home: "Longwood", date: "2/14/26"},
+      {away: "Charleston Southern", home: "Radford", date: "2/14/26"},
+      {away: "Presbyterian", home: "UNC Asheville", date: "2/14/26"},
+      {away: "Gardner Webb", home: "Charleston Southern", date: "2/17/26"},
+      {away: "UNC Asheville", home: "High Point", date: "2/19/26"},
+      {away: "Longwood", home: "Presbyterian", date: "2/19/26"},
+      {away: "Gardner Webb", home: "Radford", date: "2/19/26"},
+      {away: "USC Upstate", home: "Winthrop", date: "2/19/26"},
+      {away: "Longwood", home: "Charleston Southern", date: "2/21/26"},
+      {away: "Winthrop", home: "High Point", date: "2/21/26"},
+      {away: "Presbyterian", home: "USC Upstate", date: "2/21/26"},
+      {away: "Radford", home: "UNC Asheville", date: "2/21/26"},
+      {away: "Winthrop", home: "Charleston Southern", date: "2/26/26"},
+      {away: "UNC Asheville", home: "Gardner Webb", date: "2/26/26"},
+      {away: "High Point", home: "Presbyterian", date: "2/26/26"},
+      {away: "USC Upstate", home: "Radford", date: "2/26/26"},
+      {away: "Radford", home: "Longwood", date: "2/28/26"},
+      {away: "Gardner Webb", home: "USC Upstate", date: "2/28/26"},
+      {away: "Charleston Southern", home: "UNC Asheville", date: "2/28/26"},
+      {away: "Presbyterian", home: "Winthrop", date: "2/28/26"},
+      {away: "Wisconsin", home: "Illinois", date: "2/10/26"},
+      {away: "Purdue", home: "Nebraska", date: "2/10/26"},
+      {away: "Iowa", home: "Maryland", date: "2/11/26"},
+      {away: "Michigan", home: "Northwestern", date: "2/11/26"},
+      {away: "USC", home: "Ohio St.", date: "2/11/26"},
+      {away: "Penn St.", home: "Washington", date: "2/11/26"},
+      {away: "Michigan St.", home: "Wisconsin", date: "2/13/26"},
+      {away: "Purdue", home: "Iowa", date: "2/14/26"},
+      {away: "UCLA", home: "Michigan", date: "2/14/26"},
+      {away: "Northwestern", home: "Nebraska", date: "2/14/26"},
+      {away: "Penn St.", home: "Oregon", date: "2/14/26"},
+      {away: "Minnesota", home: "Washington", date: "2/14/26"},
+      {away: "Indiana", home: "Illinois", date: "2/15/26"},
+      {away: "Maryland", home: "Rutgers", date: "2/15/26"},
+      {away: "Nebraska", home: "Iowa", date: "2/17/26"},
+      {away: "UCLA", home: "Michigan St.", date: "2/17/26"},
+      {away: "Wisconsin", home: "Ohio St.", date: "2/17/26"},
+      {away: "Minnesota", home: "Oregon", date: "2/17/26"},
+      {away: "Michigan", home: "Purdue", date: "2/17/26"},
+      {away: "Maryland", home: "Northwestern", date: "2/18/26"},
+      {away: "Rutgers", home: "Penn St.", date: "2/18/26"},
+      {away: "Illinois", home: "USC", date: "2/18/26"},
+      {away: "Indiana", home: "Purdue", date: "2/20/26"},
+      {away: "Washington", home: "Maryland", date: "2/21/26"},
+      {away: "Rutgers", home: "Minnesota", date: "2/21/26"},
+      {away: "Penn St.", home: "Nebraska", date: "2/21/26"},
+      {away: "Oregon", home: "USC", date: "2/21/26"},
+      {away: "Illinois", home: "UCLA", date: "2/21/26"},
+      {away: "Ohio St.", home: "Michigan St.", date: "2/22/26"},
+      {away: "Iowa", home: "Wisconsin", date: "2/22/26"},
+      {away: "Northwestern", home: "Indiana", date: "2/24/26"},
+      {away: "Minnesota", home: "Michigan", date: "2/24/26"},
+      {away: "Washington", home: "Rutgers", date: "2/24/26"},
+      {away: "USC", home: "UCLA", date: "2/24/26"},
+      {away: "Ohio St.", home: "Iowa", date: "2/25/26"},
+      {away: "Maryland", home: "Nebraska", date: "2/25/26"},
+      {away: "Wisconsin", home: "Oregon", date: "2/25/26"},
+      {away: "Michigan St.", home: "Purdue", date: "2/26/26"},
+      {away: "Michigan", home: "Illinois", date: "2/27/26"},
+      {away: "UCLA", home: "Minnesota", date: "2/28/26"},
+      {away: "Oregon", home: "Northwestern", date: "2/28/26"},
+      {away: "Iowa", home: "Penn St.", date: "2/28/26"},
+      {away: "Nebraska", home: "USC", date: "2/28/26"},
+      {away: "Wisconsin", home: "Washington", date: "2/28/26"},
+      {away: "Michigan St.", home: "Indiana", date: "3/1/26"},
+      {away: "Rutgers", home: "Maryland", date: "3/1/26"},
+      {away: "Purdue", home: "Ohio St.", date: "3/1/26"},
+      {away: "Oregon", home: "Illinois", date: "3/3/26"},
+      {away: "Nebraska", home: "UCLA", date: "3/3/26"},
+      {away: "Minnesota", home: "Indiana", date: "3/4/26"},
+      {away: "Purdue", home: "Northwestern", date: "3/4/26"},
+      {away: "Ohio St.", home: "Penn St.", date: "3/4/26"},
+      {away: "USC", home: "Washington", date: "3/4/26"},
+      {away: "Maryland", home: "Wisconsin", date: "3/4/26"},
+      {away: "Michigan", home: "Iowa", date: "3/5/26"},
+      {away: "Rutgers", home: "Michigan St.", date: "3/5/26"},
+      {away: "Northwestern", home: "Minnesota", date: "3/7/26"},
+      {away: "Indiana", home: "Ohio St.", date: "3/7/26"},
+      {away: "Washington", home: "Oregon", date: "3/7/26"},
+      {away: "Wisconsin", home: "Purdue", date: "3/7/26"},
+      {away: "UCLA", home: "USC", date: "3/7/26"},
+      {away: "Illinois", home: "Maryland", date: "3/8/26"},
+      {away: "Michigan St.", home: "Michigan", date: "3/8/26"},
+      {away: "Iowa", home: "Nebraska", date: "3/8/26"},
+      {away: "Penn St.", home: "Rutgers", date: "3/8/26"},
+      {away: "UC Irvine", home: "Cal Poly", date: "2/12/26"},
+      {away: "Hawaii", home: "Cal St. Bakersfield", date: "2/12/26"},
+      {away: "Cal St. Fullerton", home: "Long Beach St.", date: "2/12/26"},
+      {away: "UC Santa Barbara", home: "UC Riverside", date: "2/12/26"},
+      {away: "UC Davis", home: "UC San Diego", date: "2/12/26"},
+      {away: "UC Santa Barbara", home: "Cal Poly", date: "2/14/26"},
+      {away: "Hawaii", home: "Cal St. Northridge", date: "2/14/26"},
+      {away: "Long Beach St.", home: "UC Davis", date: "2/14/26"},
+      {away: "Cal St. Fullerton", home: "UC Irvine", date: "2/14/26"},
+      {away: "UC Riverside", home: "UC San Diego", date: "2/14/26"},
+      {away: "UC Davis", home: "Cal St. Fullerton", date: "2/19/26"},
+      {away: "UC Irvine", home: "Long Beach St.", date: "2/19/26"},
+      {away: "Cal St. Bakersfield", home: "UC Riverside", date: "2/19/26"},
+      {away: "Cal St. Northridge", home: "UC Santa Barbara", date: "2/19/26"},
+      {away: "Cal Poly", home: "Hawaii", date: "2/20/26"},
+      {away: "Cal St. Fullerton", home: "Cal St. Bakersfield", date: "2/21/26"},
+      {away: "Cal St. Northridge", home: "Long Beach St.", date: "2/21/26"},
+      {away: "UC San Diego", home: "UC Irvine", date: "2/21/26"},
+      {away: "UC Davis", home: "UC Riverside", date: "2/21/26"},
+      {away: "UC Santa Barbara", home: "Hawaii", date: "2/22/26"},
+      {away: "Long Beach St.", home: "Cal Poly", date: "2/26/26"},
+      {away: "UC Irvine", home: "Cal St. Northridge", date: "2/26/26"},
+      {away: "Hawaii", home: "UC Davis", date: "2/26/26"},
+      {away: "Cal St. Bakersfield", home: "UC San Diego", date: "2/26/26"},
+      {away: "UC Riverside", home: "UC Santa Barbara", date: "2/26/26"},
+      {away: "Long Beach St.", home: "Cal St. Bakersfield", date: "2/28/26"},
+      {away: "Hawaii", home: "Cal St. Fullerton", date: "2/28/26"},
+      {away: "UC Santa Barbara", home: "UC Irvine", date: "2/28/26"},
+      {away: "Cal St. Northridge", home: "UC Riverside", date: "2/28/26"},
+      {away: "Cal Poly", home: "UC San Diego", date: "2/28/26"},
+      {away: "Cal St. Northridge", home: "Cal St. Bakersfield", date: "3/5/26"},
+      {away: "UC San Diego", home: "Cal St. Fullerton", date: "3/5/26"},
+      {away: "UC Davis", home: "Long Beach St.", date: "3/5/26"},
+      {away: "Cal Poly", home: "UC Irvine", date: "3/5/26"},
+      {away: "UC Riverside", home: "Hawaii", date: "3/6/26"},
+      {away: "Cal St. Bakersfield", home: "Cal Poly", date: "3/7/26"},
+      {away: "Cal St. Fullerton", home: "Cal St. Northridge", date: "3/7/26"},
+      {away: "UC Davis", home: "UC Irvine", date: "3/7/26"},
+      {away: "UC San Diego", home: "UC Santa Barbara", date: "3/7/26"},
+      {away: "Long Beach St.", home: "Hawaii", date: "3/8/26"},
+      {away: "Hofstra", home: "Charleston", date: "2/12/26"},
+      {away: "Monmouth", home: "Drexel", date: "2/12/26"},
+      {away: "William & Mary", home: "Northeastern", date: "2/12/26"},
+      {away: "Stony Brook", home: "Towson", date: "2/12/26"},
+      {away: "Elon", home: "UNC Wilmington", date: "2/12/26"},
+      {away: "North Carolina A&T", home: "Hampton", date: "2/13/26"},
+      {away: "Charleston", home: "Campbell", date: "2/14/26"},
+      {away: "Towson", home: "Monmouth", date: "2/14/26"},
+      {away: "Hofstra", home: "UNC Wilmington", date: "2/14/26"},
+      {away: "Elon", home: "William & Mary", date: "2/14/26"},
+      {away: "Drexel", home: "Stony Brook", date: "2/16/26"},
+      {away: "William & Mary", home: "Campbell", date: "2/19/26"},
+      {away: "Hampton", home: "Hofstra", date: "2/19/26"},
+      {away: "Charleston", home: "North Carolina A&T", date: "2/19/26"},
+      {away: "Drexel", home: "Northeastern", date: "2/19/26"},
+      {away: "Monmouth", home: "UNC Wilmington", date: "2/19/26"},
+      {away: "UNC Wilmington", home: "Campbell", date: "2/21/26"},
+      {away: "Monmouth", home: "Charleston", date: "2/21/26"},
+      {away: "Towson", home: "Drexel", date: "2/21/26"},
+      {away: "North Carolina A&T", home: "Elon", date: "2/21/26"},
+      {away: "Hofstra", home: "Northeastern", date: "2/21/26"},
+      {away: "Hampton", home: "Stony Brook", date: "2/21/26"},
+      {away: "Campbell", home: "Drexel", date: "2/26/26"},
+      {away: "Charleston", home: "Hampton", date: "2/26/26"},
+      {away: "Stony Brook", home: "Monmouth", date: "2/26/26"},
+      {away: "Elon", home: "Towson", date: "2/26/26"},
+      {away: "North Carolina A&T", home: "UNC Wilmington", date: "2/26/26"},
+      {away: "Northeastern", home: "William & Mary", date: "2/26/26"},
+      {away: "Northeastern", home: "Hampton", date: "2/28/26"},
+      {away: "Stony Brook", home: "Hofstra", date: "2/28/26"},
+      {away: "Elon", home: "Monmouth", date: "2/28/26"},
+      {away: "William & Mary", home: "North Carolina A&T", date: "2/28/26"},
+      {away: "Campbell", home: "Towson", date: "2/28/26"},
+      {away: "Charleston", home: "UNC Wilmington", date: "2/28/26"},
+      {away: "North Carolina A&T", home: "Campbell", date: "3/3/26"},
+      {away: "UNC Wilmington", home: "Elon", date: "3/3/26"},
+      {away: "Drexel", home: "Hofstra", date: "3/3/26"},
+      {away: "Monmouth", home: "Northeastern", date: "3/3/26"},
+      {away: "Towson", home: "Stony Brook", date: "3/3/26"},
+      {away: "Hampton", home: "William & Mary", date: "3/3/26"},
+      {away: "UTEP", home: "Jacksonville St.", date: "2/11/26"},
+      {away: "Liberty", home: "New Mexico St.", date: "2/11/26"},
+      {away: "Delaware", home: "FIU", date: "2/12/26"},
+      {away: "Middle Tennessee", home: "Kennesaw St.", date: "2/12/26"},
+      {away: "Louisiana Tech", home: "Missouri St.", date: "2/12/26"},
+      {away: "Louisiana Tech", home: "FIU", date: "2/14/26"},
+      {away: "New Mexico St.", home: "Jacksonville St.", date: "2/14/26"},
+      {away: "Sam Houston St.", home: "Kennesaw St.", date: "2/14/26"},
+      {away: "Delaware", home: "Missouri St.", date: "2/14/26"},
+      {away: "Liberty", home: "UTEP", date: "2/14/26"},
+      {away: "Middle Tennessee", home: "Western Kentucky", date: "2/14/26"},
+      {away: "Western Kentucky", home: "Delaware", date: "2/18/26"},
+      {away: "Jacksonville St.", home: "Louisiana Tech", date: "2/18/26"},
+      {away: "Kennesaw St.", home: "Missouri St.", date: "2/18/26"},
+      {away: "Middle Tennessee", home: "Sam Houston St.", date: "2/18/26"},
+      {away: "FIU", home: "Liberty", date: "2/19/26"},
+      {away: "Missouri St.", home: "FIU", date: "2/21/26"},
+      {away: "Louisiana Tech", home: "Kennesaw St.", date: "2/21/26"},
+      {away: "Western Kentucky", home: "Liberty", date: "2/21/26"},
+      {away: "Delaware", home: "Middle Tennessee", date: "2/21/26"},
+      {away: "UTEP", home: "New Mexico St.", date: "2/21/26"},
+      {away: "Jacksonville St.", home: "Sam Houston St.", date: "2/21/26"},
+      {away: "Delaware", home: "Jacksonville St.", date: "2/26/26"},
+      {away: "Liberty", home: "Kennesaw St.", date: "2/26/26"},
+      {away: "Missouri St.", home: "Louisiana Tech", date: "2/26/26"},
+      {away: "UTEP", home: "Middle Tennessee", date: "2/26/26"},
+      {away: "FIU", home: "Sam Houston St.", date: "2/26/26"},
+      {away: "New Mexico St.", home: "Western Kentucky", date: "2/26/26"},
+      {away: "Liberty", home: "Jacksonville St.", date: "2/28/26"},
+      {away: "Delaware", home: "Kennesaw St.", date: "2/28/26"},
+      {away: "FIU", home: "Louisiana Tech", date: "2/28/26"},
+      {away: "New Mexico St.", home: "Middle Tennessee", date: "2/28/26"},
+      {away: "Missouri St.", home: "Sam Houston St.", date: "2/28/26"},
+      {away: "UTEP", home: "Western Kentucky", date: "2/28/26"},
+      {away: "Sam Houston St.", home: "Delaware", date: "3/5/26"},
+      {away: "Middle Tennessee", home: "FIU", date: "3/5/26"},
+      {away: "Louisiana Tech", home: "Liberty", date: "3/5/26"},
+      {away: "Western Kentucky", home: "Missouri St.", date: "3/5/26"},
+      {away: "Jacksonville St.", home: "New Mexico St.", date: "3/5/26"},
+      {away: "Kennesaw St.", home: "UTEP", date: "3/5/26"},
+      {away: "Louisiana Tech", home: "Delaware", date: "3/7/26"},
+      {away: "Western Kentucky", home: "FIU", date: "3/7/26"},
+      {away: "Sam Houston St.", home: "Liberty", date: "3/7/26"},
+      {away: "Middle Tennessee", home: "Missouri St.", date: "3/7/26"},
+      {away: "Kennesaw St.", home: "New Mexico St.", date: "3/7/26"},
+      {away: "Jacksonville St.", home: "UTEP", date: "3/7/26"},
+      {away: "Milwaukee", home: "IUPUI", date: "2/10/26"},
+      {away: "Robert Morris", home: "Cleveland St.", date: "2/12/26"},
+      {away: "Purdue Fort Wayne", home: "Green Bay", date: "2/12/26"},
+      {away: "Northern Kentucky", home: "IUPUI", date: "2/12/26"},
+      {away: "Youngstown St.", home: "Oakland", date: "2/12/26"},
+      {away: "Detroit Mercy", home: "Wright St.", date: "2/12/26"},
+      {away: "Wright St.", home: "Cleveland St.", date: "2/15/26"},
+      {away: "Youngstown St.", home: "Detroit Mercy", date: "2/15/26"},
+      {away: "Green Bay", home: "Milwaukee", date: "2/15/26"},
+      {away: "IUPUI", home: "Purdue Fort Wayne", date: "2/15/26"},
+      {away: "Oakland", home: "Robert Morris", date: "2/15/26"},
+      {away: "Purdue Fort Wayne", home: "Northern Kentucky", date: "2/18/26"},
+      {away: "Cleveland St.", home: "Youngstown St.", date: "2/18/26"},
+      {away: "IUPUI", home: "Wright St.", date: "2/19/26"},
+      {away: "Milwaukee", home: "Detroit Mercy", date: "2/20/26"},
+      {away: "Green Bay", home: "Oakland", date: "2/20/26"},
+      {away: "Northern Kentucky", home: "Youngstown St.", date: "2/21/26"},
+      {away: "Purdue Fort Wayne", home: "Cleveland St.", date: "2/22/26"},
+      {away: "Green Bay", home: "Detroit Mercy", date: "2/22/26"},
+      {away: "Milwaukee", home: "Oakland", date: "2/22/26"},
+      {away: "Robert Morris", home: "Wright St.", date: "2/22/26"},
+      {away: "Northern Kentucky", home: "Cleveland St.", date: "2/25/26"},
+      {away: "Oakland", home: "IUPUI", date: "2/25/26"},
+      {away: "Youngstown St.", home: "Milwaukee", date: "2/25/26"},
+      {away: "Wright St.", home: "Purdue Fort Wayne", date: "2/25/26"},
+      {away: "Detroit Mercy", home: "Robert Morris", date: "2/25/26"},
+      {away: "Youngstown St.", home: "Green Bay", date: "2/28/26"},
+      {away: "Purdue Fort Wayne", home: "IUPUI", date: "2/28/26"},
+      {away: "Wright St.", home: "Northern Kentucky", date: "2/28/26"},
+      {away: "Detroit Mercy", home: "Oakland", date: "2/28/26"},
+      {away: "Cleveland St.", home: "Robert Morris", date: "2/28/26"},
+      {away: "Yale", home: "Dartmouth", date: "2/13/26"},
+      {away: "Brown", home: "Harvard", date: "2/13/26"},
+      {away: "Columbia", home: "Penn", date: "2/13/26"},
+      {away: "Cornell", home: "Princeton", date: "2/13/26"},
+      {away: "Brown", home: "Dartmouth", date: "2/14/26"},
+      {away: "Yale", home: "Harvard", date: "2/14/26"},
+      {away: "Cornell", home: "Penn", date: "2/14/26"},
+      {away: "Columbia", home: "Princeton", date: "2/14/26"},
+      {away: "Princeton", home: "Brown", date: "2/20/26"},
+      {away: "Dartmouth", home: "Columbia", date: "2/21/26"},
+      {away: "Harvard", home: "Cornell", date: "2/21/26"},
+      {away: "Penn", home: "Yale", date: "2/21/26"},
+      {away: "Brown", home: "Columbia", date: "2/27/26"},
+      {away: "Yale", home: "Cornell", date: "2/27/26"},
+      {away: "Dartmouth", home: "Penn", date: "2/27/26"},
+      {away: "Harvard", home: "Princeton", date: "2/27/26"},
+      {away: "Yale", home: "Columbia", date: "2/28/26"},
+      {away: "Brown", home: "Cornell", date: "2/28/26"},
+      {away: "Harvard", home: "Penn", date: "2/28/26"},
+      {away: "Dartmouth", home: "Princeton", date: "2/28/26"},
+      {away: "Penn", home: "Brown", date: "3/6/26"},
+      {away: "Columbia", home: "Harvard", date: "3/6/26"},
+      {away: "Cornell", home: "Dartmouth", date: "3/7/26"},
+      {away: "Princeton", home: "Yale", date: "3/7/26"},
+      {away: "Marist", home: "Merrimack", date: "2/12/26"},
+      {away: "Iona", home: "Canisius", date: "2/13/26"},
+      {away: "Manhattan", home: "Niagara", date: "2/13/26"},
+      {away: "Mount St. Mary's", home: "Rider", date: "2/13/26"},
+      {away: "Saint Peter's", home: "Sacred Heart", date: "2/13/26"},
+      {away: "Quinnipiac", home: "Siena", date: "2/13/26"},
+      {away: "Manhattan", home: "Canisius", date: "2/15/26"},
+      {away: "Siena", home: "Marist", date: "2/15/26"},
+      {away: "Iona", home: "Niagara", date: "2/15/26"},
+      {away: "Merrimack", home: "Quinnipiac", date: "2/15/26"},
+      {away: "Rider", home: "Sacred Heart", date: "2/15/26"},
+      {away: "Fairfield", home: "Saint Peter's", date: "2/15/26"},
+      {away: "Sacred Heart", home: "Fairfield", date: "2/20/26"},
+      {away: "Saint Peter's", home: "Iona", date: "2/20/26"},
+      {away: "Marist", home: "Manhattan", date: "2/20/26"},
+      {away: "Siena", home: "Merrimack", date: "2/20/26"},
+      {away: "Niagara", home: "Mount St. Mary's", date: "2/20/26"},
+      {away: "Canisius", home: "Rider", date: "2/20/26"},
+      {away: "Sacred Heart", home: "Marist", date: "2/22/26"},
+      {away: "Iona", home: "Merrimack", date: "2/22/26"},
+      {away: "Canisius", home: "Mount St. Mary's", date: "2/22/26"},
+      {away: "Fairfield", home: "Quinnipiac", date: "2/22/26"},
+      {away: "Niagara", home: "Rider", date: "2/22/26"},
+      {away: "Saint Peter's", home: "Siena", date: "2/22/26"},
+      {away: "Merrimack", home: "Canisius", date: "2/27/26"},
+      {away: "Siena", home: "Fairfield", date: "2/27/26"},
+      {away: "Rider", home: "Iona", date: "2/27/26"},
+      {away: "Quinnipiac", home: "Niagara", date: "2/27/26"},
+      {away: "Mount St. Mary's", home: "Sacred Heart", date: "2/27/26"},
+      {away: "Manhattan", home: "Saint Peter's", date: "2/27/26"},
+      {away: "Quinnipiac", home: "Canisius", date: "3/1/26"},
+      {away: "Mount St. Mary's", home: "Fairfield", date: "3/1/26"},
+      {away: "Iona", home: "Manhattan", date: "3/1/26"},
+      {away: "Saint Peter's", home: "Marist", date: "3/1/26"},
+      {away: "Merrimack", home: "Niagara", date: "3/1/26"},
+      {away: "Rider", home: "Siena", date: "3/1/26"},
+      {away: "Buffalo", home: "Ball St.", date: "2/11/26"},
+      {away: "Eastern Michigan", home: "Kent St.", date: "2/11/26"},
+      {away: "Bowling Green", home: "Northern Illinois", date: "2/11/26"},
+      {away: "Toledo", home: "Western Michigan", date: "2/11/26"},
+      {away: "Massachusetts", home: "Akron", date: "2/13/26"},
+      {away: "Ohio", home: "Miami OH", date: "2/13/26"},
+      {away: "Kent St.", home: "Ball St.", date: "2/14/26"},
+      {away: "Toledo", home: "Bowling Green", date: "2/14/26"},
+      {away: "Northern Illinois", home: "Central Michigan", date: "2/14/26"},
+      {away: "Western Michigan", home: "Eastern Michigan", date: "2/14/26"},
+      {away: "Kent St.", home: "Bowling Green", date: "2/17/26"},
+      {away: "Northern Illinois", home: "Buffalo", date: "2/17/26"},
+      {away: "Central Michigan", home: "Eastern Michigan", date: "2/17/26"},
+      {away: "Miami OH", home: "Massachusetts", date: "2/17/26"},
+      {away: "Ball St.", home: "Ohio", date: "2/17/26"},
+      {away: "Akron", home: "Western Michigan", date: "2/17/26"},
+      {away: "Akron", home: "Ball St.", date: "2/20/26"},
+      {away: "Western Michigan", home: "Central Michigan", date: "2/21/26"},
+      {away: "Buffalo", home: "Massachusetts", date: "2/21/26"},
+      {away: "Bowling Green", home: "Miami OH", date: "2/21/26"},
+      {away: "Ohio", home: "Northern Illinois", date: "2/21/26"},
+      {away: "Eastern Michigan", home: "Toledo", date: "2/21/26"},
+      {away: "Buffalo", home: "Akron", date: "2/24/26"},
+      {away: "Massachusetts", home: "Ball St.", date: "2/24/26"},
+      {away: "Western Michigan", home: "Bowling Green", date: "2/24/26"},
+      {away: "Miami OH", home: "Eastern Michigan", date: "2/24/26"},
+      {away: "Central Michigan", home: "Kent St.", date: "2/24/26"},
+      {away: "Northern Illinois", home: "Toledo", date: "2/24/26"},
+      {away: "Massachusetts", home: "Bowling Green", date: "2/28/26"},
+      {away: "Central Michigan", home: "Buffalo", date: "2/28/26"},
+      {away: "Akron", home: "Kent St.", date: "2/28/26"},
+      {away: "Ball St.", home: "Northern Illinois", date: "2/28/26"},
+      {away: "Toledo", home: "Ohio", date: "2/28/26"},
+      {away: "Miami OH", home: "Western Michigan", date: "2/28/26"},
+      {away: "Eastern Michigan", home: "Buffalo", date: "3/3/26"},
+      {away: "Akron", home: "Central Michigan", date: "3/3/26"},
+      {away: "Ohio", home: "Massachusetts", date: "3/3/26"},
+      {away: "Toledo", home: "Miami OH", date: "3/3/26"},
+      {away: "Kent St.", home: "Northern Illinois", date: "3/3/26"},
+      {away: "Ball St.", home: "Western Michigan", date: "3/3/26"},
+      {away: "Northern Illinois", home: "Akron", date: "3/6/26"},
+      {away: "Central Michigan", home: "Ball St.", date: "3/6/26"},
+      {away: "Bowling Green", home: "Eastern Michigan", date: "3/6/26"},
+      {away: "Western Michigan", home: "Kent St.", date: "3/6/26"},
+      {away: "Miami OH", home: "Ohio", date: "3/6/26"},
+      {away: "Buffalo", home: "Toledo", date: "3/6/26"},
+      {away: "MD-Eastern Shore", home: "Howard", date: "2/14/26"},
+      {away: "Delaware St.", home: "Norfolk St.", date: "2/14/26"},
+      {away: "Coppin St.", home: "North Carolina Central", date: "2/14/26"},
+      {away: "Morgan St.", home: "South Carolina St.", date: "2/14/26"},
+      {away: "Howard", home: "Delaware St.", date: "2/16/26"},
+      {away: "Norfolk St.", home: "MD-Eastern Shore", date: "2/16/26"},
+      {away: "Morgan St.", home: "North Carolina Central", date: "2/16/26"},
+      {away: "Coppin St.", home: "South Carolina St.", date: "2/16/26"},
+      {away: "North Carolina Central", home: "South Carolina St.", date: "2/18/26"},
+      {away: "MD-Eastern Shore", home: "Coppin St.", date: "2/21/26"},
+      {away: "North Carolina Central", home: "Howard", date: "2/21/26"},
+      {away: "Delaware St.", home: "Morgan St.", date: "2/21/26"},
+      {away: "South Carolina St.", home: "Norfolk St.", date: "2/21/26"},
+      {away: "Norfolk St.", home: "Coppin St.", date: "2/28/26"},
+      {away: "North Carolina Central", home: "Delaware St.", date: "2/28/26"},
+      {away: "South Carolina St.", home: "MD-Eastern Shore", date: "2/28/26"},
+      {away: "Howard", home: "Morgan St.", date: "2/28/26"},
+      {away: "South Carolina St.", home: "Delaware St.", date: "3/2/26"},
+      {away: "Coppin St.", home: "Howard", date: "3/2/26"},
+      {away: "North Carolina Central", home: "MD-Eastern Shore", date: "3/2/26"},
+      {away: "Norfolk St.", home: "Morgan St.", date: "3/2/26"},
+      {away: "Delaware St.", home: "MD-Eastern Shore", date: "3/5/26"},
+      {away: "Coppin St.", home: "Morgan St.", date: "3/5/26"},
+      {away: "Howard", home: "Norfolk St.", date: "3/5/26"},
+      {away: "South Carolina St.", home: "North Carolina Central", date: "3/5/26"},
+      {away: "MD-Eastern Shore", home: "Howard", date: "2/14/26"},
+      {away: "Delaware St.", home: "Norfolk St.", date: "2/14/26"},
+      {away: "Coppin St.", home: "North Carolina Central", date: "2/14/26"},
+      {away: "Morgan St.", home: "South Carolina St.", date: "2/14/26"},
+      {away: "Howard", home: "Delaware St.", date: "2/16/26"},
+      {away: "Norfolk St.", home: "MD-Eastern Shore", date: "2/16/26"},
+      {away: "Morgan St.", home: "North Carolina Central", date: "2/16/26"},
+      {away: "Coppin St.", home: "South Carolina St.", date: "2/16/26"},
+      {away: "North Carolina Central", home: "South Carolina St.", date: "2/18/26"},
+      {away: "MD-Eastern Shore", home: "Coppin St.", date: "2/21/26"},
+      {away: "North Carolina Central", home: "Howard", date: "2/21/26"},
+      {away: "Delaware St.", home: "Morgan St.", date: "2/21/26"},
+      {away: "South Carolina St.", home: "Norfolk St.", date: "2/21/26"},
+      {away: "Norfolk St.", home: "Coppin St.", date: "2/28/26"},
+      {away: "North Carolina Central", home: "Delaware St.", date: "2/28/26"},
+      {away: "South Carolina St.", home: "MD-Eastern Shore", date: "2/28/26"},
+      {away: "Howard", home: "Morgan St.", date: "2/28/26"},
+      {away: "South Carolina St.", home: "Delaware St.", date: "3/2/26"},
+      {away: "Coppin St.", home: "Howard", date: "3/2/26"},
+      {away: "North Carolina Central", home: "MD-Eastern Shore", date: "3/2/26"},
+      {away: "Norfolk St.", home: "Morgan St.", date: "3/2/26"},
+      {away: "Delaware St.", home: "MD-Eastern Shore", date: "3/5/26"},
+      {away: "Coppin St.", home: "Morgan St.", date: "3/5/26"},
+      {away: "Howard", home: "Norfolk St.", date: "3/5/26"},
+      {away: "South Carolina St.", home: "North Carolina Central", date: "3/5/26"},
+      {away: "Colorado St.", home: "Air Force", date: "2/10/26"},
+      {away: "San Jose St.", home: "UNLV", date: "2/10/26"},
+      {away: "Fresno St.", home: "Utah St.", date: "2/10/26"},
+      {away: "New Mexico", home: "Grand Canyon", date: "2/11/26"},
+      {away: "UNLV", home: "Boise St.", date: "2/13/26"},
+      {away: "Wyoming", home: "Colorado St.", date: "2/14/26"},
+      {away: "Air Force", home: "Fresno St.", date: "2/14/26"},
+      {away: "Nevada", home: "San Diego St.", date: "2/14/26"},
+      {away: "Grand Canyon", home: "San Jose St.", date: "2/14/26"},
+      {away: "Air Force", home: "New Mexico", date: "2/17/26"},
+      {away: "Grand Canyon", home: "San Diego St.", date: "2/17/26"},
+      {away: "Nevada", home: "San Jose St.", date: "2/17/26"},
+      {away: "Fresno St.", home: "Wyoming", date: "2/17/26"},
+      {away: "Colorado St.", home: "UNLV", date: "2/18/26"},
+      {away: "Boise St.", home: "Utah St.", date: "2/18/26"},
+      {away: "UNLV", home: "Air Force", date: "2/21/26"},
+      {away: "San Jose St.", home: "Boise St.", date: "2/21/26"},
+      {away: "San Diego St.", home: "Colorado St.", date: "2/21/26"},
+      {away: "New Mexico", home: "Fresno St.", date: "2/21/26"},
+      {away: "Wyoming", home: "Grand Canyon", date: "2/21/26"},
+      {away: "Utah St.", home: "Nevada", date: "2/21/26"},
+      {away: "San Jose St.", home: "Air Force", date: "2/24/26"},
+      {away: "Wyoming", home: "Boise St.", date: "2/24/26"},
+      {away: "Fresno St.", home: "Colorado St.", date: "2/24/26"},
+      {away: "New Mexico", home: "Nevada", date: "2/24/26"},
+      {away: "UNLV", home: "Grand Canyon", date: "2/25/26"},
+      {away: "Utah St.", home: "San Diego St.", date: "2/25/26"},
+      {away: "Boise St.", home: "Fresno St.", date: "2/28/26"},
+      {away: "Nevada", home: "UNLV", date: "2/28/26"},
+      {away: "San Diego St.", home: "New Mexico", date: "2/28/26"},
+      {away: "Colorado St.", home: "San Jose St.", date: "2/28/26"},
+      {away: "Grand Canyon", home: "Utah St.", date: "2/28/26"},
+      {away: "Air Force", home: "Wyoming", date: "2/28/26"},
+      {away: "Grand Canyon", home: "Air Force", date: "3/3/26"},
+      {away: "San Diego St.", home: "Boise St.", date: "3/3/26"},
+      {away: "San Jose St.", home: "Fresno St.", date: "3/3/26"},
+      {away: "Utah St.", home: "UNLV", date: "3/3/26"},
+      {away: "Nevada", home: "Wyoming", date: "3/3/26"},
+      {away: "Colorado St.", home: "New Mexico", date: "3/4/26"},
+      {away: "UNLV", home: "San Diego St.", date: "3/6/26"},
+      {away: "Boise St.", home: "Colorado St.", date: "3/7/26"},
+      {away: "Fresno St.", home: "Grand Canyon", date: "3/7/26"},
+      {away: "Air Force", home: "Nevada", date: "3/7/26"},
+      {away: "Wyoming", home: "San Jose St.", date: "3/7/26"},
+      {away: "New Mexico", home: "Utah St.", date: "3/7/26"},
+      {away: "Stonehill", home: "Chicago St.", date: "2/12/26"},
+      {away: "Saint Francis", home: "Fairleigh Dickinson", date: "2/12/26"},
+      {away: "Mercyhurst", home: "Le Moyne", date: "2/12/26"},
+      {away: "Central Connecticut", home: "New Haven", date: "2/12/26"},
+      {away: "LIU", home: "Wagner", date: "2/12/26"},
+      {away: "Central Connecticut", home: "Fairleigh Dickinson", date: "2/14/26"},
+      {away: "Chicago St.", home: "Le Moyne", date: "2/14/26"},
+      {away: "LIU", home: "New Haven", date: "2/14/26"},
+      {away: "Wagner", home: "Stonehill", date: "2/14/26"},
+      {away: "Wagner", home: "LIU", date: "2/16/26"},
+      {away: "Le Moyne", home: "Central Connecticut", date: "2/19/26"},
+      {away: "Fairleigh Dickinson", home: "Chicago St.", date: "2/19/26"},
+      {away: "Wagner", home: "Mercyhurst", date: "2/19/26"},
+      {away: "Stonehill", home: "New Haven", date: "2/19/26"},
+      {away: "LIU", home: "Saint Francis", date: "2/19/26"},
+      {away: "Central Connecticut", home: "Chicago St.", date: "2/21/26"},
+      {away: "New Haven", home: "Fairleigh Dickinson", date: "2/21/26"},
+      {away: "LIU", home: "Mercyhurst", date: "2/21/26"},
+      {away: "Wagner", home: "Saint Francis", date: "2/21/26"},
+      {away: "Le Moyne", home: "Stonehill", date: "2/21/26"},
+      {away: "Saint Francis", home: "New Haven", date: "2/24/26"},
+      {away: "Mercyhurst", home: "Central Connecticut", date: "2/26/26"},
+      {away: "Fairleigh Dickinson", home: "Le Moyne", date: "2/26/26"},
+      {away: "Chicago St.", home: "LIU", date: "2/26/26"},
+      {away: "Saint Francis", home: "Stonehill", date: "2/26/26"},
+      {away: "New Haven", home: "Wagner", date: "2/26/26"},
+      {away: "Saint Francis", home: "Central Connecticut", date: "2/28/26"},
+      {away: "Fairleigh Dickinson", home: "LIU", date: "2/28/26"},
+      {away: "Le Moyne", home: "New Haven", date: "2/28/26"},
+      {away: "Mercyhurst", home: "Stonehill", date: "2/28/26"},
+      {away: "Chicago St.", home: "Wagner", date: "2/28/26"},
+      {away: "Eastern Illinois", home: "Western Illinois", date: "2/10/26"},
+      {away: "UT Martin", home: "Lindenwood", date: "2/12/26"},
+      {away: "Tennessee Tech", home: "Morehead St.", date: "2/12/26"},
+      {away: "Southeast Missouri St.", home: "SIU-Edwardsville", date: "2/12/26"},
+      {away: "Tennessee St.", home: "Southern Indiana", date: "2/12/26"},
+      {away: "Little Rock", home: "Western Illinois", date: "2/12/26"},
+      {away: "Little Rock", home: "Eastern Illinois", date: "2/14/26"},
+      {away: "Southeast Missouri St.", home: "Lindenwood", date: "2/14/26"},
+      {away: "Tennessee St.", home: "Morehead St.", date: "2/14/26"},
+      {away: "UT Martin", home: "SIU-Edwardsville", date: "2/14/26"},
+      {away: "Tennessee Tech", home: "Southern Indiana", date: "2/14/26"},
+      {away: "Southeast Missouri St.", home: "UT Martin", date: "2/17/26"},
+      {away: "Morehead St.", home: "Eastern Illinois", date: "2/19/26"},
+      {away: "UT Martin", home: "Little Rock", date: "2/19/26"},
+      {away: "Lindenwood", home: "Tennessee St.", date: "2/19/26"},
+      {away: "SIU-Edwardsville", home: "Tennessee Tech", date: "2/19/26"},
+      {away: "Southern Indiana", home: "Western Illinois", date: "2/19/26"},
+      {away: "Southern Indiana", home: "Eastern Illinois", date: "2/21/26"},
+      {away: "Southeast Missouri St.", home: "Little Rock", date: "2/21/26"},
+      {away: "SIU-Edwardsville", home: "Tennessee St.", date: "2/21/26"},
+      {away: "Lindenwood", home: "Tennessee Tech", date: "2/21/26"},
+      {away: "Morehead St.", home: "Western Illinois", date: "2/21/26"},
+      {away: "Southern Indiana", home: "Morehead St.", date: "2/24/26"},
+      {away: "Eastern Illinois", home: "Lindenwood", date: "2/26/26"},
+      {away: "Morehead St.", home: "Little Rock", date: "2/26/26"},
+      {away: "Western Illinois", home: "SIU-Edwardsville", date: "2/26/26"},
+      {away: "Tennessee Tech", home: "UT Martin", date: "2/26/26"},
+      {away: "Southern Indiana", home: "Little Rock", date: "2/28/26"},
+      {away: "Tennessee Tech", home: "Southeast Missouri St.", date: "2/28/26"},
+      {away: "Eastern Illinois", home: "SIU-Edwardsville", date: "2/28/26"},
+      {away: "Tennessee St.", home: "UT Martin", date: "2/28/26"},
+      {away: "Lindenwood", home: "Western Illinois", date: "2/28/26"},
+      {away: "Boston University", home: "Army", date: "2/11/26"},
+      {away: "Colgate", home: "Holy Cross", date: "2/11/26"},
+      {away: "Loyola MD", home: "Lafayette", date: "2/11/26"},
+      {away: "American", home: "Lehigh", date: "2/11/26"},
+      {away: "Army", home: "American", date: "2/14/26"},
+      {away: "Bucknell", home: "Boston University", date: "2/14/26"},
+      {away: "Navy", home: "Colgate", date: "2/14/26"},
+      {away: "Lehigh", home: "Lafayette", date: "2/14/26"},
+      {away: "Holy Cross", home: "Loyola MD", date: "2/15/26"},
+      {away: "Colgate", home: "Boston University", date: "2/16/26"},
+      {away: "American", home: "Bucknell", date: "2/18/26"},
+      {away: "Lafayette", home: "Holy Cross", date: "2/18/26"},
+      {away: "Army", home: "Loyola MD", date: "2/18/26"},
+      {away: "Lehigh", home: "Navy", date: "2/18/26"},
+      {away: "Navy", home: "Army", date: "2/21/26"},
+      {away: "Loyola MD", home: "Colgate", date: "2/21/26"},
+      {away: "Boston University", home: "Lehigh", date: "2/21/26"},
+      {away: "Holy Cross", home: "Bucknell", date: "2/22/26"},
+      {away: "American", home: "Lafayette", date: "2/22/26"},
+      {away: "Lehigh", home: "American", date: "2/25/26"},
+      {away: "Bucknell", home: "Army", date: "2/25/26"},
+      {away: "Holy Cross", home: "Boston University", date: "2/25/26"},
+      {away: "Lafayette", home: "Colgate", date: "2/25/26"},
+      {away: "Navy", home: "Loyola MD", date: "2/25/26"},
+      {away: "Boston University", home: "American", date: "2/28/26"},
+      {away: "Loyola MD", home: "Holy Cross", date: "2/28/26"},
+      {away: "Army", home: "Lafayette", date: "2/28/26"},
+      {away: "Bucknell", home: "Lehigh", date: "2/28/26"},
+      {away: "Colgate", home: "Navy", date: "2/28/26"},
+      {away: "Vanderbilt", home: "Auburn", date: "2/10/26"},
+      {away: "Arkansas", home: "LSU", date: "2/10/26"},
+      {away: "Florida", home: "Georgia", date: "2/11/26"},
+      {away: "Alabama", home: "Mississippi", date: "2/11/26"},
+      {away: "Tennessee", home: "Mississippi St.", date: "2/11/26"},
+      {away: "Missouri", home: "Texas A&M", date: "2/11/26"},
+      {away: "South Carolina", home: "Alabama", date: "2/14/26"},
+      {away: "Auburn", home: "Arkansas", date: "2/14/26"},
+      {away: "Kentucky", home: "Florida", date: "2/14/26"},
+      {away: "Mississippi St.", home: "Mississippi", date: "2/14/26"},
+      {away: "Texas", home: "Missouri", date: "2/14/26"},
+      {away: "Georgia", home: "Oklahoma", date: "2/14/26"},
+      {away: "LSU", home: "Tennessee", date: "2/14/26"},
+      {away: "Texas A&M", home: "Vanderbilt", date: "2/14/26"},
+      {away: "South Carolina", home: "Florida", date: "2/17/26"},
+      {away: "Georgia", home: "Kentucky", date: "2/17/26"},
+      {away: "LSU", home: "Texas", date: "2/17/26"},
+      {away: "Arkansas", home: "Alabama", date: "2/18/26"},
+      {away: "Auburn", home: "Mississippi St.", date: "2/18/26"},
+      {away: "Vanderbilt", home: "Missouri", date: "2/18/26"},
+      {away: "Oklahoma", home: "Tennessee", date: "2/18/26"},
+      {away: "Mississippi", home: "Texas A&M", date: "2/18/26"},
+      {away: "Missouri", home: "Arkansas", date: "2/21/26"},
+      {away: "Kentucky", home: "Auburn", date: "2/21/26"},
+      {away: "Texas", home: "Georgia", date: "2/21/26"},
+      {away: "Alabama", home: "LSU", date: "2/21/26"},
+      {away: "Florida", home: "Mississippi", date: "2/21/26"},
+      {away: "Texas A&M", home: "Oklahoma", date: "2/21/26"},
+      {away: "Mississippi St.", home: "South Carolina", date: "2/21/26"},
+      {away: "Tennessee", home: "Vanderbilt", date: "2/21/26"},
+      {away: "Tennessee", home: "Missouri", date: "2/24/26"},
+      {away: "Auburn", home: "Oklahoma", date: "2/24/26"},
+      {away: "Kentucky", home: "South Carolina", date: "2/24/26"},
+      {away: "Mississippi St.", home: "Alabama", date: "2/25/26"},
+      {away: "Texas A&M", home: "Arkansas", date: "2/25/26"},
+      {away: "LSU", home: "Mississippi", date: "2/25/26"},
+      {away: "Florida", home: "Texas", date: "2/25/26"},
+      {away: "Georgia", home: "Vanderbilt", date: "2/25/26"},
+      {away: "Mississippi", home: "Auburn", date: "2/28/26"},
+      {away: "Arkansas", home: "Florida", date: "2/28/26"},
+      {away: "South Carolina", home: "Georgia", date: "2/28/26"},
+      {away: "Vanderbilt", home: "Kentucky", date: "2/28/26"},
+      {away: "Oklahoma", home: "LSU", date: "2/28/26"},
+      {away: "Missouri", home: "Mississippi St.", date: "2/28/26"},
+      {away: "Alabama", home: "Tennessee", date: "2/28/26"},
+      {away: "Texas", home: "Texas A&M", date: "2/28/26"},
+      {away: "LSU", home: "Auburn", date: "3/3/26"},
+      {away: "Mississippi St.", home: "Florida", date: "3/3/26"},
+      {away: "Alabama", home: "Georgia", date: "3/3/26"},
+      {away: "Missouri", home: "Oklahoma", date: "3/3/26"},
+      {away: "Tennessee", home: "South Carolina", date: "3/3/26"},
+      {away: "Kentucky", home: "Texas A&M", date: "3/3/26"},
+      {away: "Texas", home: "Arkansas", date: "3/4/26"},
+      {away: "Vanderbilt", home: "Mississippi", date: "3/4/26"},
+      {away: "Auburn", home: "Alabama", date: "3/7/26"},
+      {away: "Florida", home: "Kentucky", date: "3/7/26"},
+      {away: "Texas A&M", home: "LSU", date: "3/7/26"},
+      {away: "South Carolina", home: "Mississippi", date: "3/7/26"},
+      {away: "Georgia", home: "Mississippi St.", date: "3/7/26"},
+      {away: "Arkansas", home: "Missouri", date: "3/7/26"},
+      {away: "Vanderbilt", home: "Tennessee", date: "3/7/26"},
+      {away: "Oklahoma", home: "Texas", date: "3/7/26"},
+      {away: "Chattanooga", home: "East Tennessee St.", date: "2/11/26"},
+      {away: "Furman", home: "Mercer", date: "2/11/26"},
+      {away: "Wofford", home: "Samford", date: "2/11/26"},
+      {away: "VMI", home: "UNC Greensboro", date: "2/11/26"},
+      {away: "The Citadel", home: "Western Carolina", date: "2/11/26"},
+      {away: "Western Carolina", home: "Chattanooga", date: "2/14/26"},
+      {away: "Samford", home: "East Tennessee St.", date: "2/14/26"},
+      {away: "Mercer", home: "The Citadel", date: "2/14/26"},
+      {away: "Wofford", home: "UNC Greensboro", date: "2/14/26"},
+      {away: "Furman", home: "VMI", date: "2/14/26"},
+      {away: "East Tennessee St.", home: "Furman", date: "2/18/26"},
+      {away: "UNC Greensboro", home: "Western Carolina", date: "2/18/26"},
+      {away: "VMI", home: "Wofford", date: "2/18/26"},
+      {away: "Chattanooga", home: "Mercer", date: "2/19/26"},
+      {away: "Samford", home: "The Citadel", date: "2/19/26"},
+      {away: "Samford", home: "Mercer", date: "2/21/26"},
+      {away: "Chattanooga", home: "The Citadel", date: "2/21/26"},
+      {away: "East Tennessee St.", home: "UNC Greensboro", date: "2/21/26"},
+      {away: "Western Carolina", home: "VMI", date: "2/21/26"},
+      {away: "Furman", home: "Wofford", date: "2/21/26"},
+      {away: "Wofford", home: "East Tennessee St.", date: "2/25/26"},
+      {away: "The Citadel", home: "Furman", date: "2/25/26"},
+      {away: "Mercer", home: "Western Carolina", date: "2/25/26"},
+      {away: "UNC Greensboro", home: "Chattanooga", date: "2/26/26"},
+      {away: "VMI", home: "Samford", date: "2/26/26"},
+      {away: "VMI", home: "Chattanooga", date: "2/28/26"},
+      {away: "East Tennessee St.", home: "Mercer", date: "2/28/26"},
+      {away: "UNC Greensboro", home: "Samford", date: "2/28/26"},
+      {away: "Furman", home: "Western Carolina", date: "2/28/26"},
+      {away: "The Citadel", home: "Wofford", date: "2/28/26"},
+      {away: "McNeese St.", home: "East Texas A&M", date: "2/14/26"},
+      {away: "New Orleans", home: "Houston Christian", date: "2/14/26"},
+      {away: "Nicholls St.", home: "Incarnate Word", date: "2/14/26"},
+      {away: "Southeastern Louisiana", home: "Northwestern St.", date: "2/14/26"},
+      {away: "Lamar", home: "Texas A&M-CC", date: "2/14/26"},
+      {away: "Stephen F. Austin", home: "UT Rio Grande Valley", date: "2/14/26"},
+      {away: "Southeastern Louisiana", home: "East Texas A&M", date: "2/16/26"},
+      {away: "Nicholls St.", home: "Houston Christian", date: "2/16/26"},
+      {away: "New Orleans", home: "Incarnate Word", date: "2/16/26"},
+      {away: "McNeese St.", home: "Northwestern St.", date: "2/16/26"},
+      {away: "Stephen F. Austin", home: "Texas A&M-CC", date: "2/16/26"},
+      {away: "Lamar", home: "UT Rio Grande Valley", date: "2/16/26"},
+      {away: "Incarnate Word", home: "East Texas A&M", date: "2/21/26"},
+      {away: "New Orleans", home: "Lamar", date: "2/21/26"},
+      {away: "Texas A&M-CC", home: "McNeese St.", date: "2/21/26"},
+      {away: "Houston Christian", home: "Northwestern St.", date: "2/21/26"},
+      {away: "UT Rio Grande Valley", home: "Southeastern Louisiana", date: "2/21/26"},
+      {away: "Nicholls St.", home: "Stephen F. Austin", date: "2/21/26"},
+      {away: "Houston Christian", home: "East Texas A&M", date: "2/23/26"},
+      {away: "Nicholls St.", home: "Lamar", date: "2/23/26"},
+      {away: "UT Rio Grande Valley", home: "McNeese St.", date: "2/23/26"},
+      {away: "Incarnate Word", home: "Northwestern St.", date: "2/23/26"},
+      {away: "Texas A&M-CC", home: "Southeastern Louisiana", date: "2/23/26"},
+      {away: "New Orleans", home: "Stephen F. Austin", date: "2/23/26"},
+      {away: "Stephen F. Austin", home: "Houston Christian", date: "2/28/26"},
+      {away: "Lamar", home: "Incarnate Word", date: "2/28/26"},
+      {away: "McNeese St.", home: "New Orleans", date: "2/28/26"},
+      {away: "Southeastern Louisiana", home: "Nicholls St.", date: "2/28/26"},
+      {away: "Northwestern St.", home: "Texas A&M-CC", date: "2/28/26"},
+      {away: "East Texas A&M", home: "UT Rio Grande Valley", date: "2/28/26"},
+      {away: "Lamar", home: "Houston Christian", date: "3/2/26"},
+      {away: "Stephen F. Austin", home: "Incarnate Word", date: "3/2/26"},
+      {away: "Southeastern Louisiana", home: "New Orleans", date: "3/2/26"},
+      {away: "McNeese St.", home: "Nicholls St.", date: "3/2/26"},
+      {away: "East Texas A&M", home: "Texas A&M-CC", date: "3/2/26"},
+      {away: "Northwestern St.", home: "UT Rio Grande Valley", date: "3/2/26"},
+      {away: "Mississippi Valley St.", home: "Alabama A&M", date: "2/14/26"},
+      {away: "Arkansas Pine Bluff", home: "Alabama St.", date: "2/14/26"},
+      {away: "Bethune Cookman", home: "Alcorn St.", date: "2/14/26"},
+      {away: "Florida A&M", home: "Jackson St.", date: "2/14/26"},
+      {away: "Southern", home: "Prairie View A&M", date: "2/14/26"},
+      {away: "Grambling", home: "Texas Southern", date: "2/14/26"},
+      {away: "Arkansas Pine Bluff", home: "Alabama A&M", date: "2/16/26"},
+      {away: "Mississippi Valley St.", home: "Alabama St.", date: "2/16/26"},
+      {away: "Florida A&M", home: "Alcorn St.", date: "2/16/26"},
+      {away: "Bethune Cookman", home: "Jackson St.", date: "2/16/26"},
+      {away: "Grambling", home: "Prairie View A&M", date: "2/16/26"},
+      {away: "Southern", home: "Texas Southern", date: "2/16/26"},
+      {away: "Alabama St.", home: "Bethune Cookman", date: "2/19/26"},
+      {away: "Alabama St.", home: "Florida A&M", date: "2/19/26"},
+      {away: "Mississippi Valley St.", home: "Prairie View A&M", date: "2/19/26"},
+      {away: "Jackson St.", home: "Alcorn St.", date: "2/21/26"},
+      {away: "Prairie View A&M", home: "Arkansas Pine Bluff", date: "2/21/26"},
+      {away: "Alabama A&M", home: "Bethune Cookman", date: "2/21/26"},
+      {away: "Texas Southern", home: "Mississippi Valley St.", date: "2/21/26"},
+      {away: "Grambling", home: "Southern", date: "2/21/26"},
+      {away: "Mississippi Valley St.", home: "Grambling", date: "2/23/26"},
+      {away: "Bethune Cookman", home: "Grambling", date: "2/26/26"},
+      {away: "Jackson St.", home: "Prairie View A&M", date: "2/26/26"},
+      {away: "Florida A&M", home: "Southern", date: "2/26/26"},
+      {away: "Alcorn St.", home: "Texas Southern", date: "2/26/26"},
+      {away: "Alabama St.", home: "Alabama A&M", date: "2/28/26"},
+      {away: "Mississippi Valley St.", home: "Arkansas Pine Bluff", date: "2/28/26"},
+      {away: "Florida A&M", home: "Grambling", date: "2/28/26"},
+      {away: "Alcorn St.", home: "Prairie View A&M", date: "2/28/26"},
+      {away: "Bethune Cookman", home: "Southern", date: "2/28/26"},
+      {away: "Jackson St.", home: "Texas Southern", date: "2/28/26"},
+      {away: "Grambling", home: "Alabama A&M", date: "3/3/26"},
+      {away: "Southern", home: "Alabama St.", date: "3/3/26"},
+      {away: "Mississippi Valley St.", home: "Alcorn St.", date: "3/3/26"},
+      {away: "Arkansas Pine Bluff", home: "Jackson St.", date: "3/3/26"},
+      {away: "Southern", home: "Alabama A&M", date: "3/5/26"},
+      {away: "Grambling", home: "Alabama St.", date: "3/5/26"},
+      {away: "Arkansas Pine Bluff", home: "Alcorn St.", date: "3/5/26"},
+      {away: "Bethune Cookman", home: "Florida A&M", date: "3/5/26"},
+      {away: "Mississippi Valley St.", home: "Jackson St.", date: "3/5/26"},
+      {away: "Prairie View A&M", home: "Texas Southern", date: "3/5/26"},
+      {away: "North Dakota", home: "South Dakota", date: "2/11/26"},
+      {away: "South Dakota St.", home: "Denver", date: "2/12/26"},
+      {away: "St. Thomas", home: "Nebraska Omaha", date: "2/12/26"},
+      {away: "Kansas City", home: "Oral Roberts", date: "2/12/26"},
+      {away: "St. Thomas", home: "Kansas City", date: "2/14/26"},
+      {away: "North Dakota St.", home: "North Dakota", date: "2/14/26"},
+      {away: "Denver", home: "Nebraska Omaha", date: "2/14/26"},
+      {away: "South Dakota St.", home: "Oral Roberts", date: "2/14/26"},
+      {away: "Oral Roberts", home: "Nebraska Omaha", date: "2/18/26"},
+      {away: "North Dakota St.", home: "South Dakota St.", date: "2/18/26"},
+      {away: "South Dakota", home: "Denver", date: "2/19/26"},
+      {away: "Kansas City", home: "North Dakota", date: "2/19/26"},
+      {away: "St. Thomas", home: "Denver", date: "2/21/26"},
+      {away: "Kansas City", home: "North Dakota St.", date: "2/21/26"},
+      {away: "South Dakota", home: "Oral Roberts", date: "2/21/26"},
+      {away: "North Dakota", home: "South Dakota St.", date: "2/21/26"},
+      {away: "Nebraska Omaha", home: "South Dakota", date: "2/25/26"},
+      {away: "South Dakota St.", home: "Kansas City", date: "2/26/26"},
+      {away: "Denver", home: "Oral Roberts", date: "2/26/26"},
+      {away: "North Dakota St.", home: "St. Thomas", date: "2/26/26"},
+      {away: "Oral Roberts", home: "Kansas City", date: "2/28/26"},
+      {away: "North Dakota", home: "North Dakota St.", date: "2/28/26"},
+      {away: "South Dakota St.", home: "South Dakota", date: "2/28/26"},
+      {away: "Nebraska Omaha", home: "St. Thomas", date: "2/28/26"},
+      {away: "UL Monroe", home: "Arkansas St.", date: "2/11/26"},
+      {away: "Appalachian St.", home: "Georgia Southern", date: "2/11/26"},
+      {away: "Marshall", home: "Old Dominion", date: "2/11/26"},
+      {away: "Troy", home: "Texas St.", date: "2/11/26"},
+      {away: "Georgia St.", home: "James Madison", date: "2/12/26"},
+      {away: "Coastal Carolina", home: "Louisiana", date: "2/12/26"},
+      {away: "South Alabama", home: "Southern Miss", date: "2/12/26"},
+      {away: "South Alabama", home: "Arkansas St.", date: "2/14/26"},
+      {away: "Marshall", home: "Georgia Southern", date: "2/14/26"},
+      {away: "Appalachian St.", home: "James Madison", date: "2/14/26"},
+      {away: "Georgia St.", home: "Old Dominion", date: "2/14/26"},
+      {away: "Troy", home: "Southern Miss", date: "2/14/26"},
+      {away: "UL Monroe", home: "Texas St.", date: "2/14/26"},
+      {away: "South Alabama", home: "Marshall", date: "2/16/26"},
+      {away: "Louisiana", home: "Old Dominion", date: "2/16/26"},
+      {away: "James Madison", home: "Coastal Carolina", date: "2/18/26"},
+      {away: "Troy", home: "UL Monroe", date: "2/18/26"},
+      {away: "Marshall", home: "Appalachian St.", date: "2/19/26"},
+      {away: "Georgia Southern", home: "Georgia St.", date: "2/19/26"},
+      {away: "Arkansas St.", home: "Louisiana", date: "2/19/26"},
+      {away: "Texas St.", home: "South Alabama", date: "2/19/26"},
+      {away: "Georgia Southern", home: "Appalachian St.", date: "2/21/26"},
+      {away: "Marshall", home: "Coastal Carolina", date: "2/21/26"},
+      {away: "James Madison", home: "Georgia St.", date: "2/21/26"},
+      {away: "Texas St.", home: "Louisiana", date: "2/21/26"},
+      {away: "Arkansas St.", home: "UL Monroe", date: "2/21/26"},
+      {away: "Troy", home: "South Alabama", date: "2/21/26"},
+      {away: "Old Dominion", home: "Southern Miss", date: "2/21/26"},
+      {away: "Southern Miss", home: "Arkansas St.", date: "2/24/26"},
+      {away: "Coastal Carolina", home: "Georgia St.", date: "2/24/26"},
+      {away: "Old Dominion", home: "Marshall", date: "2/24/26"},
+      {away: "Louisiana", home: "Troy", date: "2/24/26"},
+      {away: "Georgia Southern", home: "James Madison", date: "2/25/26"},
+      {away: "UL Monroe", home: "South Alabama", date: "2/25/26"},
+      {away: "Louisiana", home: "Arkansas St.", date: "2/27/26"},
+      {away: "Old Dominion", home: "Georgia St.", date: "2/27/26"},
+      {away: "Coastal Carolina", home: "James Madison", date: "2/27/26"},
+      {away: "Georgia Southern", home: "Marshall", date: "2/27/26"},
+      {away: "Southern Miss", home: "South Alabama", date: "2/27/26"},
+      {away: "Appalachian St.", home: "Texas St.", date: "2/27/26"},
+      {away: "UL Monroe", home: "Troy", date: "2/27/26"},
+      {away: "UT Arlington", home: "Abilene Christian", date: "2/12/26"},
+      {away: "Cal Baptist", home: "Southern Utah", date: "2/12/26"},
+      {away: "Utah Valley", home: "Utah Tech", date: "2/12/26"},
+      {away: "Tarleton St.", home: "Abilene Christian", date: "2/14/26"},
+      {away: "Southern Utah", home: "UT Arlington", date: "2/14/26"},
+      {away: "Cal Baptist", home: "Utah Tech", date: "2/14/26"},
+      {away: "Abilene Christian", home: "Tarleton St.", date: "2/16/26"},
+      {away: "Southern Utah", home: "Tarleton St.", date: "2/19/26"},
+      {away: "Utah Tech", home: "UT Arlington", date: "2/19/26"},
+      {away: "Cal Baptist", home: "Utah Valley", date: "2/19/26"},
+      {away: "Southern Utah", home: "Abilene Christian", date: "2/21/26"},
+      {away: "Utah Tech", home: "Tarleton St.", date: "2/21/26"},
+      {away: "Utah Valley", home: "UT Arlington", date: "2/21/26"},
+      {away: "UT Arlington", home: "Cal Baptist", date: "2/26/26"},
+      {away: "Abilene Christian", home: "Utah Tech", date: "2/26/26"},
+      {away: "Tarleton St.", home: "Utah Valley", date: "2/26/26"},
+      {away: "Tarleton St.", home: "Cal Baptist", date: "2/28/26"},
+      {away: "Utah Tech", home: "Southern Utah", date: "2/28/26"},
+      {away: "Abilene Christian", home: "Utah Valley", date: "2/28/26"},
+      {away: "Abilene Christian", home: "Cal Baptist", date: "3/5/26"},
+      {away: "Utah Valley", home: "Southern Utah", date: "3/5/26"},
+      {away: "UT Arlington", home: "Tarleton St.", date: "3/5/26"},
+      {away: "UT Arlington", home: "Abilene Christian", date: "3/7/26"},
+      {away: "Cal Baptist", home: "Southern Utah", date: "3/7/26"},
+      {away: "Utah Valley", home: "Utah Tech", date: "3/7/26"},
+      {away: "Washington St.", home: "Gonzaga", date: "2/10/26"},
+      {away: "Loyola Marymount", home: "Pacific", date: "2/11/26"},
+      {away: "Pepperdine", home: "Saint Mary's", date: "2/11/26"},
+      {away: "Portland", home: "San Diego", date: "2/11/26"},
+      {away: "Seattle", home: "Santa Clara", date: "2/11/26"},
+      {away: "Oregon St.", home: "San Francisco", date: "2/12/26"},
+      {away: "Saint Mary's", home: "Pacific", date: "2/14/26"},
+      {away: "Loyola Marymount", home: "Pepperdine", date: "2/14/26"},
+      {away: "Gonzaga", home: "Santa Clara", date: "2/14/26"},
+      {away: "San Francisco", home: "San Diego", date: "2/15/26"},
+      {away: "Oregon St.", home: "Seattle", date: "2/15/26"},
+      {away: "Pepperdine", home: "Portland", date: "2/18/26"},
+      {away: "Gonzaga", home: "San Francisco", date: "2/18/26"},
+      {away: "Saint Mary's", home: "Seattle", date: "2/18/26"},
+      {away: "Pacific", home: "Washington St.", date: "2/18/26"},
+      {away: "Pacific", home: "Gonzaga", date: "2/21/26"},
+      {away: "Pepperdine", home: "Oregon St.", date: "2/21/26"},
+      {away: "Loyola Marymount", home: "San Diego", date: "2/21/26"},
+      {away: "Santa Clara", home: "San Francisco", date: "2/21/26"},
+      {away: "Portland", home: "Seattle", date: "2/21/26"},
+      {away: "Saint Mary's", home: "Washington St.", date: "2/21/26"},
+      {away: "Portland", home: "Gonzaga", date: "2/25/26"},
+      {away: "Washington St.", home: "Loyola Marymount", date: "2/25/26"},
+      {away: "San Diego", home: "Oregon St.", date: "2/25/26"},
+      {away: "Seattle", home: "Pepperdine", date: "2/25/26"},
+      {away: "Santa Clara", home: "Saint Mary's", date: "2/25/26"},
+      {away: "Seattle", home: "Loyola Marymount", date: "2/28/26"},
+      {away: "San Francisco", home: "Pacific", date: "2/28/26"},
+      {away: "Washington St.", home: "Pepperdine", date: "2/28/26"},
+      {away: "San Diego", home: "Portland", date: "2/28/26"},
+      {away: "Gonzaga", home: "Saint Mary's", date: "2/28/26"},
+      {away: "Oregon St.", home: "Santa Clara", date: "2/28/26"}
+    ];
+    // Conference assignments (31 conferences, 365 teams)
+    const conferences = {
+      "ACC": ["Boston College", "California", "Clemson", "Duke", "Florida St.", "Georgia Tech", "Louisville", "Miami FL", "N.C. State", "North Carolina", "Notre Dame", "Pittsburgh", "SMU", "Stanford", "Syracuse", "Virginia", "Virginia Tech", "Wake Forest"],
+      "ASUN": ["Austin Peay", "Bellarmine", "Central Arkansas", "Eastern Kentucky", "Florida Gulf Coast", "Jacksonville", "Lipscomb", "North Alabama", "North Florida", "Queens", "Stetson", "West Georgia"],
+      "America East": ["Binghamton", "Bryant", "Maine", "NJIT", "New Hampshire", "Albany", "UMBC", "UMass Lowell", "Vermont"],
+      "American": ["Charlotte", "East Carolina", "Florida Atlantic", "Memphis", "North Texas", "Rice", "South Florida", "Temple", "Tulane", "Tulsa", "UAB", "UTSA", "Wichita St."],
+      "Atlantic 10": ["Davidson", "Dayton", "Duquesne", "Fordham", "George Mason", "George Washington", "La Salle", "Loyola Chicago", "Rhode Island", "Richmond", "Saint Joseph's", "Saint Louis", "St. Bonaventure", "VCU", "Massachusetts"],
+      "Big 12": ["Arizona St.", "Arizona", "BYU", "Baylor", "Cincinnati", "Colorado", "Houston", "Iowa St.", "Kansas", "Kansas St.", "Oklahoma St.", "TCU", "Texas Tech", "UCF", "Utah", "West Virginia"],
+      "Big East": ["Butler", "Creighton", "DePaul", "Georgetown", "Marquette", "Providence", "Seton Hall", "St. John's", "Connecticut", "Villanova", "Xavier"],
+      "Big Sky": ["Eastern Washington", "Idaho St.", "Idaho", "Montana", "Montana St.", "Northern Arizona", "Northern Colorado", "Portland St.", "Sacramento St.", "Weber St."],
+      "Big South": ["Charleston Southern", "Gardner Webb", "High Point", "Longwood", "Presbyterian", "Radford", "USC Upstate", "UNC Asheville", "Winthrop"],
+      "Big Ten": ["Illinois", "Indiana", "Iowa", "Maryland", "Michigan St.", "Michigan", "Minnesota", "Nebraska", "Northwestern", "Ohio St.", "Oregon", "Penn St.", "Purdue", "Rutgers", "UCLA", "USC", "Washington", "Wisconsin"],
+      "Big West": ["Cal Poly", "Cal St. Bakersfield", "Cal St. Fullerton", "Cal St. Northridge", "Hawaii", "Long Beach St.", "UC Davis", "UC Irvine", "UC Riverside", "UC San Diego", "UC Santa Barbara"],
+      "Coastal": ["Campbell", "Charleston", "Drexel", "Elon", "Hampton", "Hofstra", "Monmouth", "North Carolina A&T", "Northeastern", "Stony Brook", "Towson", "UNC Wilmington", "William & Mary"],
+      "Conference USA": ["Delaware", "FIU", "Jacksonville St.", "Kennesaw St.", "Liberty", "Louisiana Tech", "Middle Tennessee", "Missouri St.", "New Mexico St.", "Sam Houston St.", "UTEP", "Western Kentucky"],
+      "Horizon": ["Cleveland St.", "Detroit Mercy", "Green Bay", "IUPUI", "Milwaukee", "Northern Kentucky", "Oakland", "Purdue Fort Wayne", "Robert Morris", "Wright St.", "Youngstown St."],
+      "Ivy": ["Brown", "Columbia", "Cornell", "Dartmouth", "Harvard", "Penn", "Princeton", "Yale"],
+      "MAAC": ["Canisius", "Fairfield", "Iona", "Manhattan", "Marist", "Merrimack", "Mount St. Mary's", "Niagara", "Quinnipiac", "Rider", "Sacred Heart", "Saint Peter's", "Siena"],
+      "MEAC": ["Coppin St.", "Delaware St.", "Howard", "Maryland Eastern Shore", "Morgan St.", "Norfolk St.", "North Carolina Central", "South Carolina St."],
+      "Mid-American": ["Akron", "Ball St.", "Bowling Green", "Buffalo", "Central Michigan", "Eastern Michigan", "Kent St.", "Miami OH", "Northern Illinois", "Ohio", "Toledo", "Western Michigan"],
+      "Missouri Valley": ["Belmont", "Bradley", "Drake", "Evansville", "Illinois St.", "Indiana St.", "Murray St.", "Northern Iowa", "Southern Illinois", "Illinois Chicago", "Valparaiso"],
+      "Mountain West": ["Air Force", "Boise St.", "Colorado St.", "Fresno St.", "Grand Canyon", "Nevada", "New Mexico", "San Diego St.", "San Jose St.", "UNLV", "Utah St.", "Wyoming"],
+      "Northeast": ["Central Connecticut", "Chicago St.", "Fairleigh Dickinson", "Le Moyne", "LIU", "Mercyhurst", "New Haven", "Saint Francis", "Stonehill", "Wagner"],
+      "Ohio Valley": ["Eastern Illinois", "Lindenwood", "Little Rock", "Morehead St.", "SIU Edwardsville", "Southeast Missouri St.", "Southern Indiana", "Tennessee St.", "Tennessee Tech", "UT Martin", "Western Illinois"],
+      "Patriot League": ["American", "Army", "Boston University", "Bucknell", "Colgate", "Holy Cross", "Lafayette", "Lehigh", "Loyola MD", "Navy"],
+      "SEC": ["Alabama", "Arkansas", "Auburn", "Florida", "Georgia", "Kentucky", "LSU", "Mississippi St.", "Missouri", "Oklahoma", "Mississippi", "South Carolina", "Tennessee", "Texas A&M", "Texas", "Vanderbilt"],
+      "SWAC": ["Alabama A&M", "Alabama St.", "Alcorn St.", "Arkansas Pine Bluff", "Bethune Cookman", "Florida A&M", "Grambling St.", "Jackson St.", "Mississippi Valley St.", "Prairie View A&M", "Southern", "Texas Southern"],
+      "Southern": ["Chattanooga", "East Tennessee St.", "Furman", "Mercer", "Samford", "The Citadel", "UNC Greensboro", "VMI", "Western Carolina", "Wofford"],
+      "Southland": ["East Texas A&M", "Houston Christian", "Incarnate Word", "Lamar", "McNeese St.", "New Orleans", "Nicholls St.", "Northwestern St.", "Southeastern Louisiana", "Stephen F. Austin", "Texas A&M Corpus Chris", "UT Rio Grande Valley"],
+      "Summit League": ["Denver", "Kansas City", "North Dakota", "North Dakota St.", "Omaha", "Oral Roberts", "South Dakota", "South Dakota St.", "St. Thomas"],
+      "Sun Belt": ["Appalachian St.", "Arkansas St.", "Coastal Carolina", "Georgia Southern", "Georgia St.", "James Madison", "Louisiana", "Marshall", "Old Dominion", "South Alabama", "Southern Miss", "Texas St.", "Troy", "Louisiana Monroe"],
+      "WAC": ["Abilene Christian", "Cal Baptist", "Southern Utah", "Tarleton St.", "UT Arlington", "Utah Tech", "Utah Valley"],
+      "West Coast": ["Gonzaga", "Loyola Marymount", "Oregon St.", "Pacific", "Pepperdine", "Portland", "Saint Mary's", "San Diego", "San Francisco", "Santa Clara", "Seattle", "Washington St."]
+    };
+
+    let teams = [];
+    let games = [];
+    let gameIdCounter = 0;
+    let contextMenuTarget = null;
+    let filterMode = 'date'; // 'date' or 'team'
+    let currentFilter = 'all';
+    let conferenceChampions = {}; // Store manual champion selections: {conference: teamName}
+
+    function getQuadLevel(opponentNet, location) {
+      if (location === 'home') {
+        if (opponentNet <= 30) return 1;
+        if (opponentNet <= 75) return 2;
+        if (opponentNet <= 160) return 3;
+        return 4;
+      } else { // away
+        if (opponentNet <= 75) return 1;
+        if (opponentNet <= 135) return 2;
+        if (opponentNet <= 240) return 3;
+        return 4;
+      }
+    }
+
+    function getQuadPoints(quad, isWin) {
+      const winPoints = [3.84, 2.78, 1, 0.5];
+      const lossPoints = [-1.02, -1.99, -4, -5];
+      return isWin ? winPoints[quad - 1] : lossPoints[quad - 1];
+    }
+
+    function findTeam(name) {
+      return teams.find(t => t.name === name);
+    }
+
+    function getTeamConference(teamName) {
+      for (const [conf, confTeams] of Object.entries(conferences)) {
+        if (confTeams.includes(teamName)) {
+          return conf;
+        }
+      }
+      return null;
+    }
+
+    function getConferenceChampion(conference) {
+      // Check if there's a manual selection
+      if (conferenceChampions[conference]) {
+        return conferenceChampions[conference];
+      }
+      
+      // Otherwise, return highest PPG team in conference
+      const confTeams = conferences[conference] || [];
+      const rankedTeams = teams.filter(t => confTeams.includes(t.name));
+      if (rankedTeams.length === 0) return null;
+      
+      // Sort by PPG descending
+      rankedTeams.sort((a, b) => b.ppg - a.ppg);
+      return rankedTeams[0].name;
+    }
+
+    function getAllAutobids() {
+      const autobids = [];
+      for (const conference of Object.keys(conferences)) {
+        const champion = getConferenceChampion(conference);
+        if (champion) {
+          autobids.push(champion);
+        }
+      }
+      return autobids;
+    }
+
+    function getTournamentField() {
+      const autobids = getAllAutobids();
+      const atLarge = teams
+        .filter(t => !autobids.includes(t.name))
+        .sort((a, b) => b.ppg - a.ppg)
+        .slice(0, 37)
+        .map(t => t.name);
+      
+      return {
+        autobids: autobids,
+        atLarge: atLarge,
+        all: [...autobids, ...atLarge]
+      };
+    }
+
+    function toggleConferenceChampion(event, teamName) {
+      const conference = getTeamConference(teamName);
+      if (!conference) {
+        event.preventDefault();
+        return false;
+      }
+
+      const currentChampion = conferenceChampions[conference];
+      
+      if (currentChampion === teamName) {
+        // Uncheck - remove manual selection
+        delete conferenceChampions[conference];
+      } else if (currentChampion) {
+        // Different team already selected - confirm change
+        if (!confirm(`Are you sure you want to change the ${conference} champion from ${currentChampion} to ${teamName}?`)) {
+          event.preventDefault();
+          recalculateRankings();
+          updateDisplay();
+          return false;
+        }
+        conferenceChampions[conference] = teamName;
+      } else {
+        // No one selected yet - just set it
+        conferenceChampions[conference] = teamName;
+      }
+      
+      recalculateRankings();
+      updateDisplay();
+      return true;
+    }
+
+    function initializeData() {
+      teams = JSON.parse(JSON.stringify(initialTeams));
+      
+      // Use current EST time for auto-archive
+      const currentDate = getCurrentTime();
+      // Archive games from BEFORE today (set to start of today in UTC)
+      currentDate.setUTCHours(0, 0, 0, 0);
+      
+      // Initialize games
+      games = initialGames.map(g => {
+        const awayTeam = findTeam(g.away);
+        const homeTeam = findTeam(g.home);
+        
+        if (!awayTeam || !homeTeam) return null;
+
+        // Away team perspective (playing @ home team)
+        const awayQuad = getQuadLevel(homeTeam.net, 'away');
+        
+        // Home team perspective (playing vs away team)
+        const homeQuad = getQuadLevel(awayTeam.net, 'home');
+
+        // Parse game date and check if it should be auto-archived
+        let autoArchive = false;
+        try {
+          const dateParts = g.date.split('/');
+          // Create date in UTC at start of day
+          const gameDate = new Date(Date.UTC(parseInt('20' + dateParts[2]), parseInt(dateParts[0]) - 1, parseInt(dateParts[1]), 0, 0, 0));
+          // Archive if game date is BEFORE today (< not <=)
+          autoArchive = gameDate < currentDate;
+        } catch (e) {
+          autoArchive = false;
+        }
+
+        return {
+          id: gameIdCounter++,
+          away: g.away,
+          home: g.home,
+          awayNet: awayTeam.net,
+          homeNet: homeTeam.net,
+          awayQuad: awayQuad,
+          homeQuad: homeQuad,
+          time: g.time,
+          date: g.date,
+          winner: null,
+          removed: autoArchive
+        };
+      }).filter(g => g !== null);
+
+      recalculateRankings();
+      updateDisplay();
+    }
+
+    function selectWinner(gameId, winner) {
+      const game = games.find(g => g.id === gameId);
+      if (!game || game.removed) return;
+
+      // If clicking the same team that's already selected, unselect
+      if (game.winner === winner) {
+        game.winner = null;
+      } else {
+        // Otherwise, select this team (switching if other was selected)
+        game.winner = winner;
+      }
+      
+      recalculateRankings();
+      updateDisplay();
+    }
+
+    function recalculateRankings() {
+      // Reset to initial state
+      teams = JSON.parse(JSON.stringify(initialTeams));
+
+      // Apply all decided games
+      games.forEach(game => {
+        if (!game.winner || game.removed) return;
+
+        const awayTeam = findTeam(game.away);
+        const homeTeam = findTeam(game.home);
+
+        if (!awayTeam || !homeTeam) return;
+
+        if (game.winner === 'away') {
+          // Away team wins
+          awayTeam.points += getQuadPoints(game.awayQuad, true);
+          awayTeam.games += 1;
+          // Home team loses
+          homeTeam.points += getQuadPoints(game.homeQuad, false);
+          homeTeam.games += 1;
+        } else {
+          // Home team wins
+          homeTeam.points += getQuadPoints(game.homeQuad, true);
+          homeTeam.games += 1;
+          // Away team loses
+          awayTeam.points += getQuadPoints(game.awayQuad, false);
+          awayTeam.games += 1;
+        }
+      });
+
+      // Calculate PPG and sort
+      teams.forEach(t => {
+        t.ppg = t.points / t.games;
+      });
+
+      teams.sort((a, b) => b.ppg - a.ppg);
+    }
+
+    function renderGames() {
+      const container = document.getElementById('gamesList');
+      const activeGames = getFilteredGames();
+      
+      if (activeGames.length === 0) {
+        container.innerHTML = '<p style="text-align: center; opacity: 0.6; margin-top: 2rem;">No games to display</p>';
+        return;
+      }
+
+      container.innerHTML = activeGames.map(game => {
+        const awayQuadClass = `quad-${game.awayQuad}`;
+        const homeQuadClass = `quad-${game.homeQuad}`;
+        const isCompleted = game.winner !== null;
+
+        const awayWinPoints = getQuadPoints(game.awayQuad, true);
+        const awayLossPoints = getQuadPoints(game.awayQuad, false);
+        const homeWinPoints = getQuadPoints(game.homeQuad, true);
+        const homeLossPoints = getQuadPoints(game.homeQuad, false);
+
+        return `
+          <div class="game-card ${isCompleted ? 'completed' : ''}" 
+               oncontextmenu="showContextMenu(event, ${game.id}); return false;">
+            
+            <div class="game-info">
+              <span class="game-quad ${awayQuadClass}">Away: Q${game.awayQuad}</span>
+              <span class="game-quad ${homeQuadClass}">Home: Q${game.homeQuad}</span>
+            </div>
+            
+            <div class="game-matchup">
+              <div class="team-option ${game.winner === 'away' ? 'selected' : ''} ${game.winner === 'home' ? 'loser' : ''}" 
+                   onclick="selectWinner(${game.id}, 'away')">
+                <div class="team-name">${game.away}</div>
+                <div class="team-net">NET: ${game.awayNet}</div>
+              </div>
+              
+              <div class="at-symbol">@</div>
+              
+              <div class="team-option ${game.winner === 'home' ? 'selected' : ''} ${game.winner === 'away' ? 'loser' : ''}" 
+                   onclick="selectWinner(${game.id}, 'home')">
+                <div class="team-name">${game.home}</div>
+                <div class="team-net">NET: ${game.homeNet}</div>
+              </div>
+            </div>
+
+            <div class="game-impact">
+              ${game.away}: Win +${awayWinPoints.toFixed(2)} | Loss ${awayLossPoints.toFixed(2)} pts<br>
+              ${game.home}: Win +${homeWinPoints.toFixed(2)} | Loss ${homeLossPoints.toFixed(2)} pts
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRankings() {
+      const tbody = document.getElementById('rankingsBody');
+      const tournamentField = getTournamentField();
+      const autobids = tournamentField.autobids;
+      const atLarge = tournamentField.atLarge;
+      const inTournament = tournamentField.all;
+      
+      // Get at-large teams sorted by PPG for bubble calculation
+      const atLargeTeams = teams.filter(t => !autobids.includes(t.name)).sort((a, b) => b.ppg - a.ppg);
+      const last4In = atLargeTeams.slice(33, 37).map(t => t.name); // positions 34-37 of at-large
+      const first4Out = atLargeTeams.slice(37, 41).map(t => t.name); // positions 38-41 of at-large
+      
+      tbody.innerHTML = teams.map((team, index) => {
+        const rank = index + 1;
+        const isAutobid = autobids.includes(team.name);
+        const isInTournament = inTournament.includes(team.name);
+        const isLast4In = last4In.includes(team.name);
+        const isFirst4Out = first4Out.includes(team.name);
+        
+        const conference = getTeamConference(team.name);
+        const currentChampion = conference ? getConferenceChampion(conference) : null;
+        const isChampion = team.name === currentChampion;
+        
+        let status, statusClass, rowClass;
+        
+        if (isAutobid) {
+          status = 'AUTOBID';
+          statusClass = 'status-autobid';
+          rowClass = 'in-field';
+        } else if (isLast4In) {
+          status = 'LAST 4 IN';
+          statusClass = 'status-bubble';
+          rowClass = 'in-field';
+        } else if (isInTournament && rank <= 40) {
+          status = 'LOCK';
+          statusClass = 'status-lock';
+          rowClass = 'in-field';
+        } else if (isInTournament) {
+          status = 'IN';
+          statusClass = 'status-safe';
+          rowClass = 'in-field';
+        } else if (isFirst4Out) {
+          status = 'FIRST 4 OUT';
+          statusClass = 'status-out';
+          rowClass = 'bubble';
+        } else {
+          status = 'OUT';
+          statusClass = 'status-out';
+          rowClass = 'out';
+        }
+
+        const cutlineClass = rank === 68 ? 'cutline' : '';
+        const highlightClass = (filterMode === 'team' && currentFilter !== 'all' && team.name === currentFilter) ? 'highlighted' : '';
+        
+        // Championship checkbox
+        const championCheckbox = conference ? `
+          <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem;">
+            <input type="checkbox" 
+                   ${isChampion && conferenceChampions[conference] ? 'checked' : ''}
+                   onchange="return toggleConferenceChampion(event, '${team.name}')"
+                   style="cursor: pointer;">
+            <span style="white-space: nowrap;">Conf Champ</span>
+          </label>
+        ` : '';
+
+        return `
+          <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
+            <td class="rank-cell">${rank}</td>
+            <td class="team-cell">
+              ${team.name}
+              ${conference ? `<div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.2rem;">${conference}</div>` : ''}
+            </td>
+            <td class="center">${team.net}</td>
+            <td class="points-cell center">${team.ppg.toFixed(3)}</td>
+            <td class="center">${team.points.toFixed(2)}</td>
+            <td class="center">${team.games}</td>
+            <td class="center">
+              <span class="status-badge ${statusClass}">${status}</span>
+            </td>
+            <td class="center">
+              ${championCheckbox}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateStats() {
+      document.getElementById('totalTeams').textContent = teams.length;
+      document.getElementById('futureGames').textContent = games.filter(g => !g.removed && !g.winner).length;
+      document.getElementById('gamesDecided').textContent = games.filter(g => g.winner && !g.removed).length;
+      
+      // Get the 37th at-large team (last non-autobid in)
+      const tournamentField = getTournamentField();
+      const atLargeTeams = teams.filter(t => !tournamentField.autobids.includes(t.name));
+      atLargeTeams.sort((a, b) => b.ppg - a.ppg);
+      const lastAtLarge = atLargeTeams[36]; // 37th at-large team (0-indexed)
+      
+      const lastTeamPPG = lastAtLarge ? lastAtLarge.ppg.toFixed(3) : '0.000';
+      document.getElementById('cutlinePoints').textContent = lastTeamPPG;
+    }
+
+    function updateDisplay() {
+      renderGames();
+      renderRankings();
+      updateStats();
+    }
+
+    function visualizeBracket() {
+      // Get tournament field
+      const field = getTournamentField();
+      const autobids = field.autobids;
+      const atLarge = field.atLarge;
+      
+      // Get all 68 teams sorted by PPG (overall ranking)
+      const allTeamsInTournament = teams.filter(t => [...autobids, ...atLarge].includes(t.name));
+      allTeamsInTournament.sort((a, b) => b.ppg - a.ppg);
+      
+      // Assign overall ranking 1-68 for identification
+      const rankedTeams = allTeamsInTournament.map((team, index) => ({
+        ...team,
+        overallRank: index + 1,
+        isAutobid: autobids.includes(team.name)
+      }));
+      
+      // Find play-in teams
+      const autobidTeams = rankedTeams.filter(t => t.isAutobid).sort((a, b) => b.overallRank - a.overallRank);
+      const atLargeTeams = rankedTeams.filter(t => !t.isAutobid).sort((a, b) => b.overallRank - a.overallRank);
+      
+      // Worst 4 autobids compete in 2 play-in games for 2 16-seed spots
+      const playIn16Seeds = autobidTeams.slice(0, 4); // Worst 4 autobids (2 games)
+      // Next 2 worst autobids get direct 16-seeds
+      const direct16Seeds = autobidTeams.slice(4, 6); // Next 2 worst autobids
+      const playInAtLarge = atLargeTeams.slice(0, 4); // Worst 4 at-large
+      
+      // Get the 64 teams for main bracket (60 teams + 2 direct 16-seeds)
+      const playInNames = [...playIn16Seeds, ...playInAtLarge].map(t => t.name);
+      const main64 = rankedTeams.filter(t => !playInNames.includes(t.name));
+      
+      // Add the 2 direct 16-seeds to main bracket
+      const main62WithDirect16 = [...main64, ...direct16Seeds];
+      
+      // Assign REGIONAL seeds (1-16 per region)
+      const seededTeams = main62WithDirect16.map((team, index) => {
+        let seedNumber, region;
+        
+        // First 60 teams: seeds 1-15 (4 teams per seed)
+        if (index < 60) {
+          seedNumber = Math.floor(index / 4) + 1; // Seed 1-15
+          region = index % 4; // Region 0-3
+        } else {
+          // Last 2 teams are the direct 16-seeds
+          // Assign to Midwest (region 1) and South (region 3)
+          seedNumber = 16;
+          region = index === 60 ? 1 : 3; // Midwest and South
+        }
+        
+        return {
+          ...team,
+          seed: seedNumber,
+          region: region
+        };
+      });
+      
+      // Render bracket in panel
+      renderBracketPanel(seededTeams, playIn16Seeds, playInAtLarge);
+      
+      // Show bracket panel
+      document.getElementById('bracketPanel').style.display = 'block';
+    }
+
+    function closeBracket() {
+      document.getElementById('bracketPanel').style.display = 'none';
+    }
+
+    function renderBracketPanel(teams, playIn16, playInAtLarge) {
+      const playInContainer = document.getElementById('playInGames');
+      const bracketContainer = document.getElementById('bracketDisplay');
+      
+      // Assign play-in games to regions
+      // 2 16-seed play-in games: East (region 0) and West (region 2)
+      const playIn16ByRegion = {};
+      if (playIn16[0] && playIn16[1]) {
+        playIn16ByRegion[0] = {teams: [playIn16[0].name, playIn16[1].name], gameNum: 1}; // East gets game 1
+      }
+      if (playIn16[2] && playIn16[3]) {
+        playIn16ByRegion[2] = {teams: [playIn16[2].name, playIn16[3].name], gameNum: 2}; // West gets game 2
+      }
+      
+      // At-large play-ins: assign to regions with 11/12 seeds
+      const playInAtLargeByRegion = {};
+      if (playInAtLarge[0] && playInAtLarge[1]) {
+        playInAtLargeByRegion[1] = {teams: [playInAtLarge[0].name, playInAtLarge[1].name], seed: 11, gameNum: 3}; // Midwest gets 11-seed game
+      }
+      if (playInAtLarge[2] && playInAtLarge[3]) {
+        playInAtLargeByRegion[3] = {teams: [playInAtLarge[2].name, playInAtLarge[3].name], seed: 12, gameNum: 4}; // South gets 12-seed game
+      }
+      
+      // Render play-in games section
+      let playInHTML = '<div style="margin-bottom: 1.5rem;"><h3 style="color: var(--court-orange); font-size: 1.3rem; margin-bottom: 1rem;">First Four (Play-In Games)</h3>';
+      playInHTML += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">';
+      
+      // Game 1 & 2: 16-seeds
+      Object.entries(playIn16ByRegion).forEach(([region, game]) => {
+        const regionNames = ['EAST', 'MIDWEST', 'WEST', 'SOUTH'];
+        playInHTML += `
+          <div class="play-in-game">
+            <div style="font-weight: 600; color: var(--gold); margin-bottom: 0.5rem;">Game ${game.gameNum} - ${regionNames[region]} 16-Seed</div>
+            <div class="play-in-matchup">
+              <div class="play-in-team">
+                <span class="bracket-team-seed">16</span>
+                <strong>${game.teams[0]}</strong>
+                <span class="status-badge status-autobid">AUTOBID</span>
+              </div>
+              <div class="bracket-vs">vs</div>
+              <div class="play-in-team">
+                <span class="bracket-team-seed">16</span>
+                <strong>${game.teams[1]}</strong>
+                <span class="status-badge status-autobid">AUTOBID</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      // Game 3 & 4: At-large
+      Object.entries(playInAtLargeByRegion).forEach(([region, game]) => {
+        const regionNames = ['EAST', 'MIDWEST', 'WEST', 'SOUTH'];
+        playInHTML += `
+          <div class="play-in-game">
+            <div style="font-weight: 600; color: var(--gold); margin-bottom: 0.5rem;">Game ${game.gameNum} - ${regionNames[region]} ${game.seed}-Seed</div>
+            <div class="play-in-matchup">
+              <div class="play-in-team">
+                <span class="bracket-team-seed">${game.seed}</span>
+                <strong>${game.teams[0]}</strong>
+              </div>
+              <div class="bracket-vs">vs</div>
+              <div class="play-in-team">
+                <span class="bracket-team-seed">${game.seed}</span>
+                <strong>${game.teams[1]}</strong>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      playInHTML += '</div></div>';
+      playInContainer.innerHTML = playInHTML;
+
+      // Group teams by region
+      const regions = [[], [], [], []];
+      teams.forEach(team => {
+        if (team.region !== undefined && team.seed !== undefined) {
+          regions[team.region].push(team);
+        }
+      });
+      
+      // Sort each region by seed
+      regions.forEach(region => region.sort((a, b) => a.seed - b.seed));
+      
+      // Region names: 0=East, 1=Midwest, 2=West, 3=South
+      const regionNames = ['EAST', 'MIDWEST', 'WEST', 'SOUTH'];
+      const seedPairings = [
+        [1, 16], [8, 9], [5, 12], [4, 13],
+        [6, 11], [3, 14], [7, 10], [2, 15]
+      ];
+      
+      // Build bracket with 2 columns: Left (East, Midwest) and Right (West, South)
+      let bracketHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">';
+      
+      // LEFT COLUMN: East (top) and Midwest (bottom)
+      bracketHTML += '<div>';
+      [0, 1].forEach(regionIdx => {
+        const regionTeams = regions[regionIdx];
+        bracketHTML += `
+          <div style="margin-bottom: 3rem;">
+            <h2 style="text-align: center; color: var(--gold); font-family: 'Oswald', sans-serif; font-size: 2rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 3px; border-bottom: 3px solid var(--gold); padding-bottom: 0.5rem;">
+              ${regionNames[regionIdx]} REGION
+            </h2>
+        `;
+        
+        seedPairings.forEach(([seed1, seed2]) => {
+          const team1 = regionTeams.find(t => t.seed === seed1);
+          const team2 = regionTeams.find(t => t.seed === seed2);
+          
+          let team1Display = team1 ? team1.name : 'TBD';
+          let team2Display = team2 ? team2.name : 'TBD';
+          let team1Badge = team1 && team1.isAutobid ? '<span class="status-badge status-autobid">AUTO</span>' : '';
+          let team2Badge = team2 && team2.isAutobid ? '<span class="status-badge status-autobid">AUTO</span>' : '';
+          
+          // Check if this region has a 16-seed play-in
+          if (seed2 === 16 && playIn16ByRegion[regionIdx]) {
+            const game = playIn16ByRegion[regionIdx];
+            team2Display = `Play-In Winner (${game.teams[0]} vs ${game.teams[1]})`;
+            team2Badge = '<span class="status-badge" style="background: var(--court-orange);">PLAY-IN</span>';
+          }
+          
+          // Check if this region has an at-large play-in
+          if (playInAtLargeByRegion[regionIdx] && seed2 === playInAtLargeByRegion[regionIdx].seed) {
+            const game = playInAtLargeByRegion[regionIdx];
+            team2Display = `Play-In Winner (${game.teams[0]} vs ${game.teams[1]})`;
+            team2Badge = '<span class="status-badge" style="background: var(--court-orange);">PLAY-IN</span>';
+          }
+          
+          bracketHTML += `
+            <div class="bracket-matchup">
+              <div class="bracket-team">
+                <span class="bracket-team-seed">${seed1}</span>
+                <span class="bracket-team-name">${team1Display}</span>
+                ${team1Badge}
+              </div>
+              <div class="bracket-team">
+                <span class="bracket-team-seed">${seed2}</span>
+                <span class="bracket-team-name">${team2Display}</span>
+                ${team2Badge}
+              </div>
+            </div>
+          `;
+        });
+        
+        bracketHTML += '</div>';
+      });
+      bracketHTML += '</div>';
+      
+      // RIGHT COLUMN: West (top) and South (bottom)
+      bracketHTML += '<div>';
+      [2, 3].forEach(regionIdx => {
+        const regionTeams = regions[regionIdx];
+        bracketHTML += `
+          <div style="margin-bottom: 3rem;">
+            <h2 style="text-align: center; color: var(--gold); font-family: 'Oswald', sans-serif; font-size: 2rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 3px; border-bottom: 3px solid var(--gold); padding-bottom: 0.5rem;">
+              ${regionNames[regionIdx]} REGION
+            </h2>
+        `;
+        
+        seedPairings.forEach(([seed1, seed2]) => {
+          const team1 = regionTeams.find(t => t.seed === seed1);
+          const team2 = regionTeams.find(t => t.seed === seed2);
+          
+          let team1Display = team1 ? team1.name : 'TBD';
+          let team2Display = team2 ? team2.name : 'TBD';
+          let team1Badge = team1 && team1.isAutobid ? '<span class="status-badge status-autobid">AUTO</span>' : '';
+          let team2Badge = team2 && team2.isAutobid ? '<span class="status-badge status-autobid">AUTO</span>' : '';
+          
+          // Check if this region has a 16-seed play-in
+          if (seed2 === 16 && playIn16ByRegion[regionIdx]) {
+            const game = playIn16ByRegion[regionIdx];
+            team2Display = `Play-In Winner (${game.teams[0]} vs ${game.teams[1]})`;
+            team2Badge = '<span class="status-badge" style="background: var(--court-orange);">PLAY-IN</span>';
+          }
+          
+          // Check if this region has an at-large play-in
+          if (playInAtLargeByRegion[regionIdx] && seed2 === playInAtLargeByRegion[regionIdx].seed) {
+            const game = playInAtLargeByRegion[regionIdx];
+            team2Display = `Play-In Winner (${game.teams[0]} vs ${game.teams[1]})`;
+            team2Badge = '<span class="status-badge" style="background: var(--court-orange);">PLAY-IN</span>';
+          }
+          
+          bracketHTML += `
+            <div class="bracket-matchup">
+              <div class="bracket-team">
+                <span class="bracket-team-seed">${seed1}</span>
+                <span class="bracket-team-name">${team1Display}</span>
+                ${team1Badge}
+              </div>
+              <div class="bracket-team">
+                <span class="bracket-team-seed">${seed2}</span>
+                <span class="bracket-team-name">${team2Display}</span>
+                ${team2Badge}
+              </div>
+            </div>
+          `;
+        });
+        
+        bracketHTML += '</div>';
+      });
+      bracketHTML += '</div>';
+      
+      bracketHTML += '</div>';
+      
+      bracketContainer.innerHTML = bracketHTML;
+    }
+
+    function confirmResetSelections() {
+      if (confirm('⚠️ RESET ALL GAME SELECTIONS?\n\nThis will clear ALL your game picks and cannot be undone.\n\nAre you sure?')) {
+        resetAllSelections();
+      }
+    }
+
+    function resetAllSelections() {
+      games.forEach(g => {
+        if (!g.removed) {
+          g.winner = null;
+        }
+      });
+      recalculateRankings();
+      updateDisplay();
+      alert('✅ All game selections have been reset');
+    }
+
+    function showContextMenu(event, gameId) {
+      event.preventDefault();
+      contextMenuTarget = gameId;
+      
+      const menu = document.getElementById('contextMenu');
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('active');
+    }
+
+    function markGameFinal() {
+      if (contextMenuTarget !== null) {
+        const game = games.find(g => g.id === contextMenuTarget);
+        if (game && confirm(`Mark this game as final and remove from display?`)) {
+          game.removed = true;
+          recalculateRankings();
+          updateDisplay();
+        }
+      }
+      hideContextMenu();
+    }
+
+    function setFilterMode(mode) {
+      filterMode = mode;
+      currentFilter = 'all';
+      
+      // Update button states
+      document.getElementById('dateFilterBtn').classList.toggle('active', mode === 'date');
+      document.getElementById('teamFilterBtn').classList.toggle('active', mode === 'team');
+      
+      populateFilterOptions();
+      updateDisplay();
+    }
+
+    function populateFilterOptions() {
+      const select = document.getElementById('filterSelect');
+      
+      if (filterMode === 'date') {
+        // Get unique dates from NON-ARCHIVED games only
+        const activeDates = [...new Set(games.filter(g => !g.removed).map(g => g.date))].sort();
+        select.innerHTML = '<option value="all">All Dates</option>' +
+          activeDates.map(d => `<option value="${d}">${d}</option>`).join('');
+      } else {
+        // Get all team names involved in games
+        const teamNames = new Set();
+        games.forEach(g => {
+          teamNames.add(g.away);
+          teamNames.add(g.home);
+        });
+        const sortedTeams = Array.from(teamNames).sort();
+        
+        select.innerHTML = '<option value="all">All Teams</option>' +
+          sortedTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+      }
+    }
+
+    function applyFilter() {
+      currentFilter = document.getElementById('filterSelect').value;
+      updateDisplay();
+    }
+
+    function getFilteredGames() {
+      if (currentFilter === 'all') {
+        return games.filter(g => !g.removed);
+      }
+
+      if (filterMode === 'date') {
+        return games.filter(g => !g.removed && (g.date || '2/9/26') === currentFilter);
+      } else {
+        return games.filter(g => !g.removed && (g.away === currentFilter || g.home === currentFilter));
+      }
+    }
+
+    function showAdminLogin() {
+      hideContextMenu();
+      document.getElementById('loginPanel').classList.add('active');
+      document.getElementById('adminPassword').value = '';
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('adminPassword').focus();
+    }
+
+    function closeAdminLogin() {
+      document.getElementById('loginPanel').classList.remove('active');
+    }
+
+    function checkAdminPassword() {
+      const password = document.getElementById('adminPassword').value;
+      if (password === 'mm26') {
+        closeAdminLogin();
+        openAdminPanel();
+      } else {
+        document.getElementById('loginError').textContent = 'Incorrect password';
+      }
+    }
+
+    function openAdminPanel() {
+      document.getElementById('adminPanel').classList.add('active');
+      renderArchiveGames();
+    }
+
+    function closeAdminPanel() {
+      document.getElementById('adminPanel').classList.remove('active');
+    }
+
+    function renderArchiveGames() {
+      const container = document.getElementById('archiveGamesList');
+      
+      // Populate date dropdown
+      const dateSelect = document.getElementById('archiveDateSelect');
+      const uniqueDates = [...new Set(games.map(g => g.date))].sort();
+      dateSelect.innerHTML = '<option value="">Select a date...</option>' +
+        uniqueDates.map(d => `<option value="${d}">${d}</option>`).join('');
+      
+      container.innerHTML = games.map(game => {
+        const isArchived = game.removed;
+        
+        return `
+          <div class="archive-game-card ${isArchived ? 'archived' : ''}">
+            <div class="archive-game-info">
+              <strong>${game.date}</strong> - ${game.time}
+            </div>
+            <div class="archive-game-info">
+              ${game.away} @ ${game.home}
+            </div>
+            <div class="archive-game-info" style="font-size: 0.8rem; color: var(--gray);">
+              Away Q${game.awayQuad} | Home Q${game.homeQuad}
+            </div>
+            <button class="archive-btn ${isArchived ? 'unarchive' : ''}" onclick="toggleArchiveGame(${game.id})">
+              ${isArchived ? 'Unarchive' : 'Archive'}
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function executeArchiveByDate() {
+      const dateSelect = document.getElementById('archiveDateSelect');
+      const selectedDate = dateSelect.value;
+      
+      if (!selectedDate) {
+        alert('❌ Please select a date first');
+        return;
+      }
+
+      // Find ALL games on this date (even already archived ones)
+      const gamesOnDate = [];
+      const gamesToArchive = [];
+      
+      for (let i = 0; i < games.length; i++) {
+        if (games[i].date === selectedDate) {
+          gamesOnDate.push(games[i]);
+          if (!games[i].removed) {
+            gamesToArchive.push(i); // Store index
+          }
+        }
+      }
+      
+      if (gamesToArchive.length === 0) {
+        alert(`ℹ️ All ${gamesOnDate.length} games on ${selectedDate} are already archived`);
+        return;
+      }
+
+      if (confirm(`🗑️ ARCHIVE ${gamesToArchive.length} GAMES FROM ${selectedDate}?\n\nThis will:\n• Remove ${gamesToArchive.length} games from this date\n• Clear any selected winners\n• Hide this date from filters\n\nContinue?`)) {
+        // Archive by index to ensure we're modifying the actual games array
+        let archived = 0;
+        gamesToArchive.forEach(index => {
+          games[index].removed = true;
+          games[index].winner = null;
+          archived++;
+        });
+        
+        console.log(`Archived ${archived} games from ${selectedDate}`);
+        
+        // Reset dropdown
+        dateSelect.value = '';
+        const archiveBtn = document.getElementById('archiveDateBtn');
+        if (archiveBtn) {
+          archiveBtn.disabled = true;
+          archiveBtn.style.opacity = '0.5';
+          archiveBtn.style.cursor = 'not-allowed';
+        }
+        
+        // Update everything
+        recalculateRankings();
+        renderArchiveGames();
+        populateFilterOptions();
+        updateDisplay();
+        
+        alert(`✅ Successfully archived ${archived} games from ${selectedDate}`);
+      }
+    }
+
+    function toggleArchiveGame(gameId) {
+      const game = games.find(g => g.id === gameId);
+      if (game) {
+        game.removed = !game.removed;
+        if (game.removed) {
+          game.winner = null; // Clear winner when archiving
+        }
+        recalculateRankings();
+        renderArchiveGames();
+        updateDisplay();
+      }
+    }
+
+    function handleCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        parseAndUpdateTeamData(text);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseAndUpdateTeamData(csvText) {
+      const lines = csvText.trim().split('\n');
+      if (lines.length < 2) {
+        alert('CSV file appears to be empty');
+        return;
+      }
+
+      // Skip header row
+      const dataLines = lines.slice(1);
+      let updateCount = 0;
+      let skippedCount = 0;
+
+      dataLines.forEach((line, index) => {
+        // Skip empty lines
+        if (!line.trim()) return;
+        
+        // Simple CSV split - handle quoted fields
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim()); // Add last value
+        
+        // Need at least 4 columns: Team Name, NET, Quad Points, Games
+        if (values.length < 4) {
+          skippedCount++;
+          return;
+        }
+
+        const teamName = values[0].replace(/^["']|["']$/g, '').trim();
+        const net = parseInt(values[1]);
+        const quadPoints = parseFloat(values[2]);
+        const gamesPlayed = parseInt(values[3]);
+
+        if (!teamName || isNaN(net) || isNaN(quadPoints) || isNaN(gamesPlayed)) {
+          skippedCount++;
+          return;
+        }
+
+        // Find and update team in initialTeams
+        const team = initialTeams.find(t => t.name === teamName);
+        if (team) {
+          const oldNet = team.net;
+          team.net = net;
+          team.points = quadPoints;
+          team.games = gamesPlayed;
+          updateCount++;
+
+          // If NET changed, update future games
+          if (oldNet !== net) {
+            games.forEach(g => {
+              if (g.removed || g.winner) return;
+              
+              if (g.away === teamName) {
+                g.awayNet = net;
+                const homeTeam = initialTeams.find(t => t.name === g.home);
+                if (homeTeam) {
+                  g.awayQuad = getQuadLevel(homeTeam.net, 'away');
+                }
+              }
+              if (g.home === teamName) {
+                g.homeNet = net;
+                const awayTeam = initialTeams.find(t => t.name === g.away);
+                if (awayTeam) {
+                  g.homeQuad = getQuadLevel(awayTeam.net, 'home');
+                }
+              }
+            });
+          }
+        } else {
+          skippedCount++;
+        }
+      });
+
+      recalculateRankings();
+      updateDisplay();
+      
+      let message = `✅ Successfully updated ${updateCount} teams`;
+      if (skippedCount > 0) {
+        message += `\n⚠️ Skipped ${skippedCount} rows (invalid data or team not found)`;
+      }
+      alert(message);
+      
+      // Clear file input
+      document.getElementById('csvFile').value = '';
+    }
+
+    function hideContextMenu() {
+      document.getElementById('contextMenu').classList.remove('active');
+      contextMenuTarget = null;
+    }
+
+    // Hide context menu on any click
+    document.addEventListener('click', hideContextMenu);
+    
+    // Right-click anywhere to access admin panel
+    document.addEventListener('contextmenu', function(e) {
+      showContextMenu(e, null);
+    });
+
+    // Google Sheets Integration
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL_WyZmAb5wPB80AZVTiGYG6bWDIn0UkT6NrIWNjJDlQXuJLW2m_HCFIl14B7br3njPPwyMdIveuMq/pub?gid=290362125&single=true&output=csv';
+
+    async function loadTeamDataFromSheets() {
+      try {
+        const response = await fetch(SHEET_URL);
+        if (!response.ok) return false;
+        
+        const csvText = await response.text();
+        const lines = csvText.trim().split('\n');
+        if (lines.length < 2) return false;
+
+        let updated = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          const cols = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              cols.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          cols.push(current.trim());
+          
+          if (cols.length < 4) continue;
+          
+          const name = cols[0];
+          const net = parseInt(cols[1]);
+          const pts = parseFloat(cols[2]);
+          const gms = parseInt(cols[3]);
+          
+          if (!name || isNaN(net) || isNaN(pts) || isNaN(gms)) continue;
+          
+          const team = initialTeams.find(t => t.name === name);
+          if (team) {
+            team.net = net;
+            team.points = pts;
+            team.games = gms;
+            updated++;
+          }
+        }
+        
+        return updated > 0;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function getCurrentTime() {
+      // Get current UTC time
+      const now = new Date();
+      // EST is UTC-5, EDT is UTC-4
+      // Feb 12 is in EST (winter), so UTC-5
+      const offset = -5; // Change to -4 during EDT (March-November)
+      const estTime = new Date(now.getTime() + (offset * 60 * 60 * 1000));
+      return estTime;
+    }
+
+    function updateClock() {
+      const estTime = getCurrentTime();
+      const hours = estTime.getUTCHours();
+      const minutes = estTime.getUTCMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      
+      const month = estTime.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+      const day = estTime.getUTCDate();
+      
+      const timeString = `${month} ${day}, ${displayHours}:${minutes} ${ampm} ET`;
+      
+      const clockEl = document.getElementById('currentTime');
+      if (clockEl) clockEl.textContent = timeString;
+    }
+
+    // Initialize
+    window.onload = async () => {
+      await loadTeamDataFromSheets();
+      initializeData();
+      populateFilterOptions();
+      updateClock();
+      setInterval(updateClock, 60000);
+    };
+  </script>
+</body>
+</html>
