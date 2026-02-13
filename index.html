@@ -956,6 +956,10 @@
         <div class="stat-value" id="gamesDecided">0</div>
         <div class="stat-label">Games Decided</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-value" id="champsDecided">0</div>
+        <div class="stat-label">Conference Champions Decided</div>
+      </div>
     </div>
 
     <div class="main-grid">
@@ -2782,6 +2786,7 @@
 
     function toggleConferenceChampion(event, teamName) {
       const conference = getTeamConference(teamName);
+      
       if (!conference) {
         event.preventDefault();
         return false;
@@ -3145,6 +3150,10 @@
       document.getElementById('totalTeams').textContent = teams.length;
       document.getElementById('futureGames').textContent = games.filter(g => !g.removed && !g.winner).length;
       document.getElementById('gamesDecided').textContent = games.filter(g => g.winner && !g.removed).length;
+      
+      // Count manually selected conference champions
+      const champsCount = Object.keys(conferenceChampions).length;
+      document.getElementById('champsDecided').textContent = champsCount;
     }
 
     function updateDisplay() {
