@@ -803,9 +803,142 @@
       font-weight: 700;
       padding: 0.3rem 0;
     }
+    /* Cover Page */
+    .cover-page {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--dark) 0%, #1a1a2e 100%);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .cover-content {
+      max-width: 800px;
+      background: var(--card-bg);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 3rem;
+      box-shadow: 0 10px 40px rgba(253, 185, 39, 0.2);
+      animation: slideUp 0.6s ease-out;
+    }
+
+    .cover-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 3rem;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .cover-subtitle {
+      text-align: center;
+      font-size: 1.2rem;
+      color: var(--cream);
+      margin-bottom: 2rem;
+      opacity: 0.8;
+    }
+
+    .cover-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .cover-section h3 {
+      color: var(--gold);
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+      font-family: 'Oswald', sans-serif;
+    }
+
+    .cover-section p {
+      color: var(--cream);
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+
+    .cover-section ul {
+      color: var(--cream);
+      margin-left: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .cover-button {
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      margin: 2rem auto 0;
+      padding: 1rem 2rem;
+      background: var(--gold);
+      color: var(--dark);
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      font-family: 'Oswald', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .cover-button:hover {
+      background: var(--cream);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(253, 185, 39, 0.4);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
+  <!-- Cover Page -->
+  <div id="coverPage" class="cover-page">
+    <div class="cover-content">
+      <h1 class="cover-title">NCAA Bracketology</h1>
+      <p class="cover-subtitle">Tournament Projection Tool</p>
+
+      <div class="cover-section">
+        <h3>Purpose</h3>
+        <p>This tool projects what the NCAA Tournament bracket will look like based on game outcomes you select. See how different results affect tournament seeding, at-large bids, and regional matchups.</p>
+      </div>
+
+      <div class="cover-section">
+        <h3>How It Works</h3>
+        <p><strong>Select Game Winners:</strong> Click on upcoming games to pick winners and see real-time bracket updates.</p>
+        <p><strong>View Options:</strong> Filter games by date or by team to find specific matchups you want to project.</p>
+        <p><strong>Visualize Bracket:</strong> Click the "Visualize Bracket" button to see the complete tournament bracket with seeding, play-in games, and regional assignments.</p>
+      </div>
+
+      <button class="cover-button" onclick="closeCoverPage()">Enter Bracketology</button>
+    </div>
+  </div>
+
   <div class="container">
     <h1>NCAA Bracketology</h1>
     <p class="subtitle">Quad Points Per Game Projection System <span id="currentTime" style="font-size: 0.8rem; opacity: 0.7; margin-left: 1rem;"></span></p>
@@ -822,10 +955,6 @@
       <div class="stat-card">
         <div class="stat-value" id="gamesDecided">0</div>
         <div class="stat-label">Games Decided</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="cutlinePoints">0.00</div>
-        <div class="stat-label">Last Team In PPG</div>
       </div>
     </div>
 
@@ -862,12 +991,7 @@
               <tr>
                 <th>Rank</th>
                 <th>Team</th>
-                <th class="center">NET</th>
-                <th class="center">Quad PPG</th>
-                <th class="center">Total Pts</th>
-                <th class="center">Games</th>
-                <th class="center">Status</th>
-                <th class="center">Championship</th>
+                <th class="center">In/Out</th>
               </tr>
             </thead>
             <tbody id="rankingsBody">
@@ -984,92 +1108,92 @@
   <script>
     // All 365 teams data
     const initialTeams = [
-      {name: "Michigan", net: 1, points: 55.47, games: 23},
-      {name: "Arizona", net: 2, points: 54.72, games: 24},
-      {name: "Duke", net: 3, points: 52.48, games: 24},
-      {name: "Houston", net: 4, points: 51.08, games: 24},
-      {name: "Illinois", net: 5, points: 34.59, games: 25},
-      {name: "Gonzaga", net: 6, points: 37.3, games: 26},
-      {name: "Iowa St.", net: 7, points: 44.66, games: 24},
-      {name: "Connecticut", net: 8, points: 45.9, games: 24},
-      {name: "Purdue", net: 9, points: 38.36, games: 24},
-      {name: "Florida", net: 10, points: 33.35, games: 23},
-      {name: "Michigan St.", net: 11, points: 36.11, games: 24},
-      {name: "Nebraska", net: 12, points: 39.82, games: 24},
-      {name: "Kansas", net: 13, points: 42.46, games: 24},
-      {name: "Louisville", net: 14, points: 30.2, games: 24},
-      {name: "Vanderbilt", net: 15, points: 40.73, games: 24},
-      {name: "Saint Louis", net: 16, points: 26.03, games: 23},
-      {name: "Virginia", net: 17, points: 37.29, games: 24},
-      {name: "BYU", net: 18, points: 32.48, games: 24},
-      {name: "Arkansas", net: 19, points: 31.26, games: 24},
-      {name: "Texas Tech", net: 20, points: 31.76, games: 23},
-      {name: "Iowa", net: 21, points: 22.01, games: 23},
-      {name: "Tennessee", net: 22, points: 22.56, games: 23},
-      {name: "Alabama", net: 23, points: 32.83, games: 23},
-      {name: "Utah St.", net: 24, points: 28.88, games: 23},
-      {name: "St. John's", net: 25, points: 31.46, games: 24},
-      {name: "North Carolina", net: 26, points: 29.16, games: 24},
-      {name: "Kentucky", net: 27, points: 25.43, games: 24},
-      {name: "Saint Mary's", net: 28, points: 18.57, games: 24},
-      {name: "N.C. State", net: 29, points: 27.67, games: 25},
-      {name: "Clemson", net: 30, points: 34.49, games: 24},
-      {name: "Indiana", net: 31, points: 13.61, games: 25},
-      {name: "Auburn", net: 32, points: 14.75, games: 24},
-      {name: "Villanova", net: 33, points: 24.56, games: 24},
-      {name: "SMU", net: 34, points: 21.53, games: 24},
-      {name: "Georgia", net: 35, points: 20.35, games: 23},
-      {name: "Miami FL", net: 36, points: 21.09, games: 24},
-      {name: "Wisconsin", net: 37, points: 19.97, games: 24},
-      {name: "Texas", net: 38, points: 9.54, games: 23},
-      {name: "UCLA", net: 39, points: 16.22, games: 24},
-      {name: "Santa Clara", net: 40, points: 20.97, games: 25},
-      {name: "Ohio St.", net: 41, points: 9.99, games: 23},
-      {name: "Texas A&M", net: 42, points: 21.55, games: 23},
-      {name: "San Diego St.", net: 43, points: 12.08, games: 22},
-      {name: "UCF", net: 44, points: 25.08, games: 23},
-      {name: "New Mexico", net: 45, points: 15.17, games: 23},
-      {name: "Tulsa", net: 46, points: 10.34, games: 22},
-      {name: "Baylor", net: 47, points: 10.2, games: 23},
-      {name: "TCU", net: 48, points: 9.31, games: 24},
-      {name: "USC", net: 49, points: 21.51, games: 23},
-      {name: "VCU", net: 50, points: 14.84, games: 24},
-      {name: "Miami OH", net: 51, points: 18.06, games: 21},
-      {name: "Washington", net: 52, points: 4.31, games: 24},
-      {name: "Seton Hall", net: 53, points: 10.42, games: 24},
-      {name: "Boise St.", net: 54, points: 14.75, games: 22},
-      {name: "Virginia Tech", net: 55, points: 14.89, games: 24},
-      {name: "Nevada", net: 56, points: 9.56, games: 24},
-      {name: "California", net: 57, points: 14.78, games: 23},
-      {name: "Akron", net: 58, points: 3.49, games: 22},
-      {name: "Belmont", net: 59, points: 8.85, games: 25},
-      {name: "West Virginia", net: 60, points: 10.99, games: 24},
-      {name: "Missouri", net: 61, points: 12.97, games: 23},
-      {name: "South Florida", net: 62, points: 0.19, games: 23},
+      {name: "Michigan", net: 1, points: 55.47, games: 23, kenpom: 1},
+      {name: "Arizona", net: 2, points: 54.72, games: 24, kenpom: 1},
+      {name: "Duke", net: 3, points: 52.48, games: 24, kenpom: 1},
+      {name: "Houston", net: 4, points: 51.08, games: 24, kenpom: 1},
+      {name: "Illinois", net: 5, points: 34.59, games: 25, kenpom: 1},
+      {name: "Gonzaga", net: 6, points: 37.3, games: 26, kenpom: 1},
+      {name: "Iowa St.", net: 7, points: 44.66, games: 24, kenpom: 1},
+      {name: "Connecticut", net: 8, points: 45.9, games: 24, kenpom: 1},
+      {name: "Purdue", net: 9, points: 38.36, games: 24, kenpom: 1},
+      {name: "Florida", net: 10, points: 33.35, games: 23, kenpom: 1},
+      {name: "Michigan St.", net: 11, points: 36.11, games: 24, kenpom: 1},
+      {name: "Nebraska", net: 12, points: 39.82, games: 24, kenpom: 1},
+      {name: "Kansas", net: 13, points: 42.46, games: 24, kenpom: 1},
+      {name: "Louisville", net: 14, points: 30.2, games: 24, kenpom: 1},
+      {name: "Vanderbilt", net: 15, points: 40.73, games: 24, kenpom: 1},
+      {name: "Saint Louis", net: 16, points: 26.03, games: 23, kenpom: 1},
+      {name: "Virginia", net: 17, points: 37.29, games: 24, kenpom: 1},
+      {name: "BYU", net: 18, points: 32.48, games: 24, kenpom: 1},
+      {name: "Arkansas", net: 19, points: 31.26, games: 24, kenpom: 1},
+      {name: "Texas Tech", net: 20, points: 31.76, games: 23, kenpom: 1},
+      {name: "Iowa", net: 21, points: 22.01, games: 23, kenpom: 1},
+      {name: "Tennessee", net: 22, points: 22.56, games: 23, kenpom: 1},
+      {name: "Alabama", net: 23, points: 32.83, games: 23, kenpom: 1},
+      {name: "Utah St.", net: 24, points: 28.88, games: 23, kenpom: 1},
+      {name: "St. John's", net: 25, points: 31.46, games: 24, kenpom: 1},
+      {name: "North Carolina", net: 26, points: 29.16, games: 24, kenpom: 1},
+      {name: "Kentucky", net: 27, points: 25.43, games: 24, kenpom: 1},
+      {name: "Saint Mary's", net: 28, points: 18.57, games: 24, kenpom: 1},
+      {name: "N.C. State", net: 29, points: 27.67, games: 25, kenpom: 1},
+      {name: "Clemson", net: 30, points: 34.49, games: 24, kenpom: 1},
+      {name: "Indiana", net: 31, points: 13.61, games: 25, kenpom: 1},
+      {name: "Auburn", net: 32, points: 14.75, games: 24, kenpom: 1},
+      {name: "Villanova", net: 33, points: 24.56, games: 24, kenpom: 1},
+      {name: "SMU", net: 34, points: 21.53, games: 24, kenpom: 1},
+      {name: "Georgia", net: 35, points: 20.35, games: 23, kenpom: 1},
+      {name: "Miami FL", net: 36, points: 21.09, games: 24, kenpom: 1},
+      {name: "Wisconsin", net: 37, points: 19.97, games: 24, kenpom: 1},
+      {name: "Texas", net: 38, points: 9.54, games: 23, kenpom: 1},
+      {name: "UCLA", net: 39, points: 16.22, games: 24, kenpom: 1},
+      {name: "Santa Clara", net: 40, points: 20.97, games: 25, kenpom: 1},
+      {name: "Ohio St.", net: 41, points: 9.99, games: 23, kenpom: 1},
+      {name: "Texas A&M", net: 42, points: 21.55, games: 23, kenpom: 1},
+      {name: "San Diego St.", net: 43, points: 12.08, games: 22, kenpom: 1},
+      {name: "UCF", net: 44, points: 25.08, games: 23, kenpom: 1},
+      {name: "New Mexico", net: 45, points: 15.17, games: 23, kenpom: 1},
+      {name: "Tulsa", net: 46, points: 10.34, games: 22, kenpom: 1},
+      {name: "Baylor", net: 47, points: 10.2, games: 23, kenpom: 1},
+      {name: "TCU", net: 48, points: 9.31, games: 24, kenpom: 1},
+      {name: "USC", net: 49, points: 21.51, games: 23, kenpom: 1},
+      {name: "VCU", net: 50, points: 14.84, games: 24, kenpom: 1},
+      {name: "Miami OH", net: 51, points: 18.06, games: 21, kenpom: 1},
+      {name: "Washington", net: 52, points: 4.31, games: 24, kenpom: 1},
+      {name: "Seton Hall", net: 53, points: 10.42, games: 24, kenpom: 1},
+      {name: "Boise St.", net: 54, points: 14.75, games: 22, kenpom: 1},
+      {name: "Virginia Tech", net: 55, points: 14.89, games: 24, kenpom: 1},
+      {name: "Nevada", net: 56, points: 9.56, games: 24, kenpom: 1},
+      {name: "California", net: 57, points: 14.78, games: 23, kenpom: 1},
+      {name: "Akron", net: 58, points: 3.49, games: 22, kenpom: 1},
+      {name: "Belmont", net: 59, points: 8.85, games: 25, kenpom: 1},
+      {name: "West Virginia", net: 60, points: 10.99, games: 24, kenpom: 1},
+      {name: "Missouri", net: 61, points: 12.97, games: 23, kenpom: 1},
+      {name: "South Florida", net: 62, points: 0.19, games: 23, kenpom: 1},
       {name: "LSU", net: 63, points: -0.73, games: 24},
-      {name: "McNeese St.", net: 64, points: 6.82, games: 23},
-      {name: "Yale", net: 65, points: 1.26, games: 20},
+      {name: "McNeese St.", net: 64, points: 6.82, games: 23, kenpom: 1},
+      {name: "Yale", net: 65, points: 1.26, games: 20, kenpom: 1},
       {name: "Wake Forest", net: 66, points: -3.28, games: 23},
-      {name: "Oklahoma St.", net: 67, points: 15.92, games: 24},
-      {name: "Stanford", net: 68, points: 7.36, games: 24},
+      {name: "Oklahoma St.", net: 67, points: 15.92, games: 24, kenpom: 1},
+      {name: "Stanford", net: 68, points: 7.36, games: 24, kenpom: 1},
       {name: "Cincinnati", net: 69, points: -1.48, games: 24},
-      {name: "Grand Canyon", net: 70, points: 2.95, games: 23},
+      {name: "Grand Canyon", net: 70, points: 2.95, games: 23, kenpom: 1},
       {name: "Syracuse", net: 71, points: -5, games: 24},
-      {name: "Colorado", net: 72, points: 4.09, games: 24},
+      {name: "Colorado", net: 72, points: 4.09, games: 24, kenpom: 1},
       {name: "Butler", net: 73, points: -2.06, games: 24},
-      {name: "Arizona St.", net: 74, points: 7.42, games: 25},
+      {name: "Arizona St.", net: 74, points: 7.42, games: 25, kenpom: 1},
       {name: "Oklahoma", net: 75, points: -0.16, games: 24},
       {name: "Providence", net: 76, points: -7.97, games: 24},
       {name: "Northwestern", net: 77, points: -12, games: 24},
-      {name: "Liberty", net: 78, points: 6.04, games: 20},
-      {name: "Creighton", net: 79, points: 1.57, games: 24},
+      {name: "Liberty", net: 78, points: 6.04, games: 20, kenpom: 1},
+      {name: "Creighton", net: 79, points: 1.57, games: 24, kenpom: 1},
       {name: "Mississippi", net: 80, points: -2.76, games: 23},
       {name: "High Point", net: 81, points: -0.98, games: 23},
       {name: "Utah Valley", net: 82, points: -6.53, games: 21},
       {name: "Minnesota", net: 83, points: -7.36, games: 24},
-      {name: "Stephen F. Austin", net: 84, points: 5.26, games: 23},
+      {name: "Stephen F. Austin", net: 84, points: 5.26, games: 23, kenpom: 1},
       {name: "Wichita St.", net: 85, points: -10.15, games: 23},
-      {name: "George Mason", net: 86, points: 5.77, games: 24},
+      {name: "George Mason", net: 86, points: 5.77, games: 24, kenpom: 1},
       {name: "Northern Iowa", net: 87, points: -7.44, games: 24},
       {name: "Notre Dame", net: 88, points: -6.75, games: 25},
       {name: "Illinois St.", net: 89, points: -13, games: 24},
@@ -1077,7 +1201,7 @@
       {name: "Kansas St.", net: 91, points: -3.56, games: 23},
       {name: "George Washington", net: 92, points: -18.71, games: 24},
       {name: "Dayton", net: 93, points: -5.76, games: 24},
-      {name: "Georgetown", net: 94, points: 0.19, games: 24},
+      {name: "Georgetown", net: 94, points: 0.19, games: 24, kenpom: 1},
       {name: "Florida St.", net: 95, points: -3.47, games: 24},
       {name: "Murray St.", net: 96, points: -3.18, games: 26},
       {name: "Xavier", net: 97, points: -2.48, games: 24},
@@ -2754,6 +2878,70 @@
       updateDisplay();
     }
 
+    // KenPom Points Calculation with custom distribution
+    function getKenPomPoints(kenpomRank) {
+      if (!kenpomRank || isNaN(kenpomRank)) return 0;
+      
+      // Piecewise linear interpolation for exact target points
+      // Targets: 1→38, 10→29, 30→21, 80→10, 130→2, 183→0, then mirror for bottom half
+      const rank = kenpomRank;
+      
+      // Define breakpoints (rank, points)
+      const breakpoints = [
+        [1, 38],
+        [10, 29],
+        [30, 21],
+        [80, 10],
+        [130, 2],
+        [183, 0],
+        [236, -2],   // Mirror of 130
+        [286, -10],  // Mirror of 80
+        [335, -21],  // Mirror of 30
+        [355, -29],  // Mirror of 10
+        [365, -38]   // Mirror of 1
+      ];
+      
+      // Find the two breakpoints to interpolate between
+      for (let i = 0; i < breakpoints.length - 1; i++) {
+        const [rank1, points1] = breakpoints[i];
+        const [rank2, points2] = breakpoints[i + 1];
+        
+        if (rank >= rank1 && rank <= rank2) {
+          // Linear interpolation
+          const ratio = (rank - rank1) / (rank2 - rank1);
+          return points1 + ratio * (points2 - points1);
+        }
+      }
+      
+      // Fallback (shouldn't reach here)
+      return 0;
+    }
+
+    // Calculate Elo-style KenPom adjustment for a game result
+    function calculateKenPomAdjustment(winnerRTG, loserRTG, isWinnerHome) {
+      // Home court advantage = 3 points
+      const homeAdvantage = 3;
+      
+      // Adjust ratings for home/away
+      const adjustedWinnerRTG = winnerRTG + (isWinnerHome ? homeAdvantage : 0);
+      const adjustedLoserRTG = loserRTG + (!isWinnerHome ? homeAdvantage : 0);
+      
+      // Expected win probability (simplified logistic function)
+      const ratingDiff = adjustedWinnerRTG - adjustedLoserRTG;
+      const expectedWinProb = 1 / (1 + Math.pow(10, -ratingDiff / 15));
+      
+      // K-factor (maximum change per game)
+      const K = 3;
+      
+      // Actual result: winner gets 1, loser gets 0
+      const actualResult = 1;
+      
+      // Elo adjustment
+      const adjustment = K * (actualResult - expectedWinProb);
+      
+      return adjustment; // Winner gains this, loser loses this
+    }
+
     function recalculateRankings() {
       // Reset to initial state
       teams = JSON.parse(JSON.stringify(initialTeams));
@@ -2767,26 +2955,45 @@
 
         if (!awayTeam || !homeTeam) return;
 
+        // Get current KenPom ratings (these will be adjusted)
+        const awayKP = getKenPomPoints(awayTeam.kenpom);
+        const homeKP = getKenPomPoints(homeTeam.kenpom);
+
         if (game.winner === 'away') {
           // Away team wins
           awayTeam.points += getQuadPoints(game.awayQuad, true);
           awayTeam.games += 1;
+          
           // Home team loses
           homeTeam.points += getQuadPoints(game.homeQuad, false);
           homeTeam.games += 1;
+          
+          // Elo-style KenPom adjustment
+          const adjustment = calculateKenPomAdjustment(awayKP, homeKP, false);
+          awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) + adjustment;
+          homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) - adjustment;
         } else {
           // Home team wins
           homeTeam.points += getQuadPoints(game.homeQuad, true);
           homeTeam.games += 1;
+          
           // Away team loses
           awayTeam.points += getQuadPoints(game.awayQuad, false);
           awayTeam.games += 1;
+          
+          // Elo-style KenPom adjustment
+          const adjustment = calculateKenPomAdjustment(homeKP, awayKP, true);
+          homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) + adjustment;
+          awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) - adjustment;
         }
       });
 
-      // Calculate PPG and sort
+      // NEW FORMULA: (Quad PPG × 16) + KenPom RTG
       teams.forEach(t => {
-        t.ppg = t.points / t.games;
+        const quadPPG = t.points / t.games;
+        const normalizedQuadPoints = quadPPG * 16; // Normalize to 16 games
+        const kenpomRTG = t.kenpomRTG !== undefined ? t.kenpomRTG : getKenPomPoints(t.kenpom);
+        t.ppg = normalizedQuadPoints + kenpomRTG;
       });
 
       teams.sort((a, b) => b.ppg - a.ppg);
@@ -2835,11 +3042,6 @@
                 <div class="team-net">NET: ${game.homeNet}</div>
               </div>
             </div>
-
-            <div class="game-impact">
-              ${game.away}: Win +${awayWinPoints.toFixed(2)} | Loss ${awayLossPoints.toFixed(2)} pts<br>
-              ${game.home}: Win +${homeWinPoints.toFixed(2)} | Loss ${homeLossPoints.toFixed(2)} pts
-            </div>
           </div>
         `;
       }).join('');
@@ -2854,19 +3056,21 @@
       
       // Get at-large teams sorted by PPG for bubble calculation
       const atLargeTeams = teams.filter(t => !autobids.includes(t.name)).sort((a, b) => b.ppg - a.ppg);
-      const last4In = atLargeTeams.slice(33, 37).map(t => t.name); // positions 34-37 of at-large
-      const first4Out = atLargeTeams.slice(37, 41).map(t => t.name); // positions 38-41 of at-large
+      
+      // Bubble categories (at-large only):
+      const last4In = atLargeTeams.slice(33, 37).map(t => t.name);     // 34-37 at-large
+      const next4In = atLargeTeams.slice(29, 33).map(t => t.name);     // 30-33 at-large
+      const first4Out = atLargeTeams.slice(37, 41).map(t => t.name);   // 38-41 at-large
+      const next4Out = atLargeTeams.slice(41, 45).map(t => t.name);    // 42-45 at-large
       
       tbody.innerHTML = teams.map((team, index) => {
         const rank = index + 1;
         const isAutobid = autobids.includes(team.name);
         const isInTournament = inTournament.includes(team.name);
         const isLast4In = last4In.includes(team.name);
+        const isNext4In = next4In.includes(team.name);
         const isFirst4Out = first4Out.includes(team.name);
-        
-        const conference = getTeamConference(team.name);
-        const currentChampion = conference ? getConferenceChampion(conference) : null;
-        const isChampion = team.name === currentChampion;
+        const isNext4Out = next4Out.includes(team.name);
         
         let status, statusClass, rowClass;
         
@@ -2878,9 +3082,9 @@
           status = 'LAST 4 IN';
           statusClass = 'status-bubble';
           rowClass = 'in-field';
-        } else if (isInTournament && rank <= 40) {
-          status = 'LOCK';
-          statusClass = 'status-lock';
+        } else if (isNext4In) {
+          status = 'NEXT 4 IN';
+          statusClass = 'status-safe';
           rowClass = 'in-field';
         } else if (isInTournament) {
           status = 'IN';
@@ -2888,6 +3092,10 @@
           rowClass = 'in-field';
         } else if (isFirst4Out) {
           status = 'FIRST 4 OUT';
+          statusClass = 'status-out';
+          rowClass = 'bubble';
+        } else if (isNext4Out) {
+          status = 'NEXT 4 OUT';
           statusClass = 'status-out';
           rowClass = 'bubble';
         } else {
@@ -2899,16 +3107,7 @@
         const cutlineClass = rank === 68 ? 'cutline' : '';
         const highlightClass = (filterMode === 'team' && currentFilter !== 'all' && team.name === currentFilter) ? 'highlighted' : '';
         
-        // Championship checkbox
-        const championCheckbox = conference ? `
-          <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem;">
-            <input type="checkbox" 
-                   ${isChampion && conferenceChampions[conference] ? 'checked' : ''}
-                   onchange="return toggleConferenceChampion(event, '${team.name}')"
-                   style="cursor: pointer;">
-            <span style="white-space: nowrap;">Conf Champ</span>
-          </label>
-        ` : '';
+        const conference = getTeamConference(team.name);
 
         return `
           <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
@@ -2917,15 +3116,8 @@
               ${team.name}
               ${conference ? `<div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.2rem;">${conference}</div>` : ''}
             </td>
-            <td class="center">${team.net}</td>
-            <td class="points-cell center">${team.ppg.toFixed(3)}</td>
-            <td class="center">${team.points.toFixed(2)}</td>
-            <td class="center">${team.games}</td>
             <td class="center">
               <span class="status-badge ${statusClass}">${status}</span>
-            </td>
-            <td class="center">
-              ${championCheckbox}
             </td>
           </tr>
         `;
@@ -2936,15 +3128,6 @@
       document.getElementById('totalTeams').textContent = teams.length;
       document.getElementById('futureGames').textContent = games.filter(g => !g.removed && !g.winner).length;
       document.getElementById('gamesDecided').textContent = games.filter(g => g.winner && !g.removed).length;
-      
-      // Get the 37th at-large team (last non-autobid in)
-      const tournamentField = getTournamentField();
-      const atLargeTeams = teams.filter(t => !tournamentField.autobids.includes(t.name));
-      atLargeTeams.sort((a, b) => b.ppg - a.ppg);
-      const lastAtLarge = atLargeTeams[36]; // 37th at-large team (0-indexed)
-      
-      const lastTeamPPG = lastAtLarge ? lastAtLarge.ppg.toFixed(3) : '0.000';
-      document.getElementById('cutlinePoints').textContent = lastTeamPPG;
     }
 
     function updateDisplay() {
@@ -3307,15 +3490,23 @@
     }
 
     function getFilteredGames() {
+      let filtered;
+      
       if (currentFilter === 'all') {
-        return games.filter(g => !g.removed);
-      }
-
-      if (filterMode === 'date') {
-        return games.filter(g => !g.removed && (g.date || '2/9/26') === currentFilter);
+        filtered = games.filter(g => !g.removed);
+      } else if (filterMode === 'date') {
+        filtered = games.filter(g => !g.removed && (g.date || '2/9/26') === currentFilter);
+        // Sort by combined NET ranking (lowest = highest quality game)
+        filtered.sort((a, b) => {
+          const aCombined = a.awayNet + a.homeNet;
+          const bCombined = b.awayNet + b.homeNet;
+          return aCombined - bCombined; // Lower combined NET = better game (listed first)
+        });
       } else {
-        return games.filter(g => !g.removed && (g.away === currentFilter || g.home === currentFilter));
+        filtered = games.filter(g => !g.removed && (g.away === currentFilter || g.home === currentFilter));
       }
+      
+      return filtered;
     }
 
     function showAdminLogin() {
@@ -3608,20 +3799,23 @@
           }
           cols.push(current.trim());
           
-          if (cols.length < 4) continue;
+          // Now expecting 5 columns: Name, NET, Quad Points, GP, KenPom
+          if (cols.length < 5) continue;
           
           const name = cols[0];
           const net = parseInt(cols[1]);
           const pts = parseFloat(cols[2]);
           const gms = parseInt(cols[3]);
+          const kenpom = parseInt(cols[4]);
           
-          if (!name || isNaN(net) || isNaN(pts) || isNaN(gms)) continue;
+          if (!name || isNaN(net) || isNaN(pts) || isNaN(gms) || isNaN(kenpom)) continue;
           
           const team = initialTeams.find(t => t.name === name);
           if (team) {
             team.net = net;
             team.points = pts;
             team.games = gms;
+            team.kenpom = kenpom;
             updated++;
           }
         }
@@ -3656,6 +3850,10 @@
       
       const clockEl = document.getElementById('currentTime');
       if (clockEl) clockEl.textContent = timeString;
+    }
+
+    function closeCoverPage() {
+      document.getElementById('coverPage').classList.add('hidden');
     }
 
     // Initialize
