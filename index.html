@@ -992,6 +992,7 @@
                 <th>Rank</th>
                 <th>Team</th>
                 <th class="center">In/Out</th>
+                <th class="center">Championship</th>
               </tr>
             </thead>
             <tbody id="rankingsBody">
@@ -3108,6 +3109,19 @@
         const highlightClass = (filterMode === 'team' && currentFilter !== 'all' && team.name === currentFilter) ? 'highlighted' : '';
         
         const conference = getTeamConference(team.name);
+        const currentChampion = conference ? getConferenceChampion(conference) : null;
+        const isChampion = team.name === currentChampion;
+        
+        // Championship checkbox
+        const championCheckbox = conference ? `
+          <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem;">
+            <input type="checkbox" 
+                   ${isChampion && conferenceChampions[conference] ? 'checked' : ''}
+                   onchange="return toggleConferenceChampion(event, '${team.name}')"
+                   style="cursor: pointer;">
+            <span style="white-space: nowrap;">Conf Champ</span>
+          </label>
+        ` : '';
 
         return `
           <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
@@ -3118,6 +3132,9 @@
             </td>
             <td class="center">
               <span class="status-badge ${statusClass}">${status}</span>
+            </td>
+            <td class="center">
+              ${championCheckbox}
             </td>
           </tr>
         `;
