@@ -995,6 +995,9 @@
               <tr>
                 <th>Rank</th>
                 <th>Team</th>
+                <th class="center">KenPom RTG</th>
+                <th class="center">Quad Pts (×16)</th>
+                <th class="center">Total Score</th>
                 <th class="center">In/Out</th>
                 <th class="center">Championship</th>
               </tr>
@@ -3128,6 +3131,11 @@
           </label>
         ` : '';
 
+        // Calculate display values
+        const kenpomRTG = team.kenpomRTG !== undefined ? team.kenpomRTG : getKenPomPoints(team.kenpom);
+        const quadPPG = team.points / team.games;
+        const normalizedQuadPoints = quadPPG * 16;
+        
         return `
           <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
             <td class="rank-cell">${rank}</td>
@@ -3135,6 +3143,9 @@
               ${team.name}
               ${conference ? `<div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.2rem;">${conference}</div>` : ''}
             </td>
+            <td class="center">${kenpomRTG.toFixed(2)}</td>
+            <td class="center">${normalizedQuadPoints.toFixed(2)}</td>
+            <td class="points-cell center">${team.ppg.toFixed(2)}</td>
             <td class="center">
               <span class="status-badge ${statusClass}">${status}</span>
             </td>
