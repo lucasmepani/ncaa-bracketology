@@ -3456,13 +3456,17 @@
         // Get tournament field
         const simField = getTournamentFieldFromTeams(simTeams);
         const inTournament = simField.all.includes(teamName);
-        const rank = simTeams.findIndex(t => t.name === teamName) + 1;
         
         if (!inTournament) {
           seedCounts['Out']++;
         } else {
-          // Find seed (4 teams per seed line)
-          const seed = Math.min(16, Math.ceil(rank / 4));
+          // Find seed based on position IN THE TOURNAMENT FIELD (not overall rank)
+          // Re-rank the 68 teams in the field by their overall rating
+          const tournamentTeams = simTeams.filter(t => simField.all.includes(t.name));
+          const fieldPosition = tournamentTeams.findIndex(t => t.name === teamName) + 1;
+          
+          // 4 teams per seed line: positions 1-4 = seed 1, positions 5-8 = seed 2, etc.
+          const seed = Math.min(16, Math.ceil(fieldPosition / 4));
           seedCounts[seed]++;
         }
       }
@@ -3600,9 +3604,14 @@
       Object.keys(conferences).forEach(conf => {
         const confTeams = teamsArray.filter(t => conferences[conf].includes(t.name));
         if (confTeams.length > 0) {
-          // Simulate conference tournament
-          const champion = simulateConferenceTournament(confTeams);
-          confChamps[conf] = champion.name;
+          // If user manually selected a champion, use that; otherwise simulate
+          if (conferenceChampions[conf]) {
+            confChamps[conf] = conferenceChampions[conf];
+          } else {
+            // Simulate conference tournament
+            const champion = simulateConferenceTournament(confTeams);
+            confChamps[conf] = champion.name;
+          }
         }
       });
       
@@ -3709,27 +3718,15 @@
       
       contentHTML += '</div>';
       
-      // Current ratings and quad record
+      // Current ratings
       contentHTML += `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-          <div>
-            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Current Ratings</h3>
-            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
-              <div style="margin-bottom: 0.5rem;"><strong>Rank:</strong> ${teams.indexOf(team) + 1}</div>
-              <div style="margin-bottom: 0.5rem;"><strong>Skill Rating:</strong> ${(team.kenpomRTG !== undefined ? team.kenpomRTG : getKenPomPoints(team.kenpom)).toFixed(2)}</div>
-              <div style="margin-bottom: 0.5rem;"><strong>Resume Rating:</strong> ${((team.points / team.games) * 16).toFixed(2)}</div>
-              <div><strong>Total Rating:</strong> ${team.ppg.toFixed(2)}</div>
-            </div>
-          </div>
-          
-          <div>
-            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Quad Record</h3>
-            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
-              <div style="margin-bottom: 0.5rem;"><span style="background: #dc2626; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q1</span> ${quadRecord[1].w}-${quadRecord[1].l}</div>
-              <div style="margin-bottom: 0.5rem;"><span style="background: #f59e0b; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q2</span> ${quadRecord[2].w}-${quadRecord[2].l}</div>
-              <div style="margin-bottom: 0.5rem;"><span style="background: #10b981; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q3</span> ${quadRecord[3].w}-${quadRecord[3].l}</div>
-              <div><span style="background: #3b82f6; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q4</span> ${quadRecord[4].w}-${quadRecord[4].l}</div>
-            </div>
+        <div style="margin-bottom: 2rem;">
+          <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Current Ratings</h3>
+          <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
+            <div style="margin-bottom: 0.5rem;"><strong>Rank:</strong> ${teams.indexOf(team) + 1}</div>
+            <div style="margin-bottom: 0.5rem;"><strong>Skill Rating:</strong> ${(team.kenpomRTG !== undefined ? team.kenpomRTG : getKenPomPoints(team.kenpom)).toFixed(2)}</div>
+            <div style="margin-bottom: 0.5rem;"><strong>Resume Rating:</strong> ${((team.points / team.games) * 16).toFixed(2)}</div>
+            <div><strong>Total Rating:</strong> ${team.ppg.toFixed(2)}</div>
           </div>
         </div>
         
