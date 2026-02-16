@@ -4069,16 +4069,11 @@
         select.innerHTML = '<option value="all">All Dates</option>' +
           activeDates.map(d => `<option value="${d}">${d}</option>`).join('');
       } else {
-        // Get all team names involved in games
-        const teamNames = new Set();
-        games.forEach(g => {
-          teamNames.add(g.away);
-          teamNames.add(g.home);
-        });
-        const sortedTeams = Array.from(teamNames).sort();
+        // Get ALL team names from the teams array (not just teams with games)
+        const allTeamNames = teams.map(t => t.name).sort();
         
         select.innerHTML = '<option value="all">All Teams</option>' +
-          sortedTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+          allTeamNames.map(t => `<option value="${t}">${t}</option>`).join('');
       }
     }
 
