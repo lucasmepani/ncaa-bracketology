@@ -946,6 +946,7 @@
         <p><strong>Select Game Winners:</strong> Click on upcoming games to pick winners and see real-time bracket updates.</p>
         <p><strong>View Options:</strong> Filter games by date or by team to find specific matchups you want to project.</p>
         <p><strong>Visualize Bracket:</strong> Click the "Visualize Bracket" button to see the complete tournament bracket with seeding, play-in games, and regional assignments.</p>
+        <p><strong>🎲 Team Scenarios:</strong> Click "By Team" and select any team to see their seed probabilities. The tool runs 250 simulations of all remaining games to show what seeds they're likely to get. You can also test specific scenarios like "What if they win 4 of their last 6 games?" to see how their chances change.</p>
       </div>
 
       <button class="cover-button" onclick="closeCoverPage()">Enter Bracketology</button>
@@ -3065,14 +3066,14 @@
             const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
             
             // Home court advantage: +3 points
-            const adjustedHomeRTG = homeRTG + 3;
+            const adjustedHomeRTG = homeRTG + 4;
             const ratingDiff = adjustedHomeRTG - awayRTG;
             
             // Win probability: 9 points = 1 standard deviation
             // Using normal CDF approximation: Prob = 0.5 * (1 + erf(z / sqrt(2)))
             // Simplified logistic: Prob = 1 / (1 + exp(-z * sqrt(pi/8)))
-            // For our case: z = ratingDiff / 9
-            const z = ratingDiff / 9;
+            // For our case: z = ratingDiff / 14
+            const z = ratingDiff / 14;
             const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
             const awayWinProb = 1 - homeWinProb;
             
@@ -3303,7 +3304,7 @@
     }
 
     function runMonteCarloSimulation(teamName, forcedWins = null) {
-      const NUM_SIMULATIONS = 1000;
+      const NUM_SIMULATIONS = 250;
       const seedCounts = {};
       for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
       seedCounts['Out'] = 0;
@@ -3322,15 +3323,48 @@
         
         // Determine which games the selected team wins (if forced scenario)
         let teamWinsThisSim = [];
+        let teamLossesThisSim = [];
+        
         if (forcedWins !== null) {
-          // Forced wins: randomly select N of the team's games to win
-          const indices = teamRemainingGames.map((g, i) => i);
-          // Shuffle indices
-          for (let i = indices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [indices[i], indices[j]] = [indices[j], indices[i]];
+          // First, separate already-decided games from undecided ones
+          const decidedGames = [];
+          const undecidedGames = [];
+          
+          teamRemainingGames.forEach(g => {
+            const originalGame = games.find(og => og.id === g.id);
+            if (originalGame && originalGame.winner) {
+              // Already decided by user
+              decidedGames.push(g);
+              // Check if team won or lost this game
+              const teamIsAway = g.away === teamName;
+              const teamWon = (teamIsAway && originalGame.winner === 'away') || 
+                              (!teamIsAway && originalGame.winner === 'home');
+              if (teamWon) {
+                teamWinsThisSim.push(g.id);
+              } else {
+                teamLossesThisSim.push(g.id);
+              }
+            } else {
+              undecidedGames.push(g);
+            }
+          });
+          
+          // Calculate how many more wins we need from undecided games
+          const decidedWins = decidedGames.filter(g => teamWinsThisSim.includes(g.id)).length;
+          const remainingWinsNeeded = forcedWins - decidedWins;
+          
+          // If we need more wins, randomly select from undecided games
+          if (remainingWinsNeeded > 0 && undecidedGames.length > 0) {
+            const indices = undecidedGames.map((g, i) => i);
+            // Shuffle indices
+            for (let i = indices.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            const additionalWins = indices.slice(0, Math.min(remainingWinsNeeded, undecidedGames.length))
+                                          .map(i => undecidedGames[i].id);
+            teamWinsThisSim.push(...additionalWins);
           }
-          teamWinsThisSim = indices.slice(0, forcedWins).map(i => teamRemainingGames[i].id);
         }
         
         // Simulate ALL remaining games (not just the selected team's)
@@ -3338,7 +3372,15 @@
           const simGame = simGames.find(sg => sg.id === g.id);
           if (!simGame) return;
           
-          // Check if this is one of the selected team's games with a forced result
+          // FIRST: Check if user has already decided this game manually
+          const originalGame = games.find(og => og.id === g.id);
+          if (originalGame && originalGame.winner) {
+            // User already picked a winner - respect that choice
+            simGame.winner = originalGame.winner;
+            return;
+          }
+          
+          // SECOND: Check if this is one of the selected team's games with a forced result
           const isTeamGame = g.away === teamName || g.home === teamName;
           const hasForcedResult = forcedWins !== null && isTeamGame;
           
@@ -3358,9 +3400,9 @@
             
             const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
             const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
-            const adjustedHomeRTG = homeRTG + 3;
+            const adjustedHomeRTG = homeRTG + 4;
             const ratingDiff = adjustedHomeRTG - awayRTG;
-            const z = ratingDiff / 9;
+            const z = ratingDiff / 14;
             const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
             
             const homeWins = Math.random() < homeWinProb;
@@ -3517,7 +3559,7 @@
       // Build content HTML
       let contentHTML = `
         <div style="background: linear-gradient(135deg, rgba(253, 185, 39, 0.1), rgba(255, 107, 53, 0.1)); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 2px solid var(--gold);">
-          <h3 style="color: var(--gold); margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem;">🎲 Seed Probability (1,000 Simulations)</h3>
+          <h3 style="color: var(--gold); margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem;">🎲 Seed Probability (250 Simulations)</h3>
           ${forcedWins !== null ? `<div style="text-align: center; color: var(--court-orange); font-weight: bold; margin-bottom: 1rem;">Simulating: Win ${forcedWins} of ${upcoming.length} remaining games</div>` : ''}
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem;">
       `;
@@ -3621,9 +3663,9 @@
           if (awayTeam && homeTeam) {
             const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
             const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
-            const adjustedHomeRTG = homeRTG + 3;
+            const adjustedHomeRTG = homeRTG + 4;
             const ratingDiff = adjustedHomeRTG - awayRTG;
-            const z = ratingDiff / 9;
+            const z = ratingDiff / 14;
             const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
             winProb = isAway ? ((1 - homeWinProb) * 100) : (homeWinProb * 100);
           }
