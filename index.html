@@ -117,6 +117,19 @@
       border-color: var(--gray);
     }
 
+    .win-probability {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(253, 185, 39, 0.2);
+      color: var(--cream);
+    }
+
+    .upset-game {
+      background: rgba(255, 107, 53, 0.1);
+      border-radius: 4px;
+      padding: 0.5rem;
+    }
+
     .game-time {
       text-align: center;
       font-size: 0.85rem;
@@ -342,7 +355,7 @@
     }
 
     .scrollable {
-      max-height: 600px;
+      max-height: calc(100vh - 200px);
       overflow-y: auto;
     }
 
@@ -1088,6 +1101,20 @@
       <!-- Main Bracket -->
       <div style="overflow-x: auto; padding: 2rem 0;">
         <div id="bracketDisplay" style="display: flex; gap: 3rem; min-width: max-content; justify-content: center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Detail Modal -->
+  <div id="teamDetailPanel" class="panel-overlay" style="display: none;">
+    <div class="panel-content" style="max-width: 900px;">
+      <div class="panel-header-row">
+        <h2 id="teamDetailName" style="color: var(--gold); font-family: 'Oswald', sans-serif;"></h2>
+        <button class="close-btn" onclick="closeTeamDetail()">&times;</button>
+      </div>
+      
+      <div id="teamDetailContent" style="margin-top: 1rem;">
+        <!-- Content will be populated by JavaScript -->
       </div>
     </div>
   </div>
@@ -3027,6 +3054,39 @@
         const homeWinPoints = getQuadPoints(game.homeQuad, true);
         const homeLossPoints = getQuadPoints(game.homeQuad, false);
 
+        // Calculate win probabilities if game not decided
+        let winProbDisplay = '';
+        if (!isCompleted) {
+          const awayTeam = findTeam(game.away);
+          const homeTeam = findTeam(game.home);
+          
+          if (awayTeam && homeTeam) {
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            
+            // Home court advantage: +3 points
+            const adjustedHomeRTG = homeRTG + 3;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            
+            // Win probability: 9 points = 1 standard deviation
+            // Using normal CDF approximation: Prob = 0.5 * (1 + erf(z / sqrt(2)))
+            // Simplified logistic: Prob = 1 / (1 + exp(-z * sqrt(pi/8)))
+            // For our case: z = ratingDiff / 9
+            const z = ratingDiff / 9;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            const awayWinProb = 1 - homeWinProb;
+            
+            winProbDisplay = `
+              <div class="win-probability">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-top: 0.5rem;">
+                  <span>${game.away}: ${(awayWinProb * 100).toFixed(0)}%</span>
+                  <span>${game.home}: ${(homeWinProb * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            `;
+          }
+        }
+
         return `
           <div class="game-card ${isCompleted ? 'completed' : ''}" 
                oncontextmenu="showContextMenu(event, ${game.id}); return false;">
@@ -3051,6 +3111,8 @@
                 <div class="team-net">NET: ${game.homeNet}</div>
               </div>
             </div>
+            
+            ${winProbDisplay}
           </div>
         `;
       }).join('');
@@ -3238,6 +3300,354 @@
 
     function closeBracket() {
       document.getElementById('bracketPanel').style.display = 'none';
+    }
+
+    function runMonteCarloSimulation(teamName, forcedWins = null) {
+      const NUM_SIMULATIONS = 1000;
+      const seedCounts = {};
+      for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
+      seedCounts['Out'] = 0;
+      
+      // Get team's remaining games (for forced scenario tracking only)
+      const teamRemainingGames = games.filter(g => 
+        !g.removed && !g.winner && (g.away === teamName || g.home === teamName)
+      );
+      
+      // Get ALL remaining games (for simulation)
+      const allRemainingGames = games.filter(g => !g.removed && !g.winner);
+      
+      for (let sim = 0; sim < NUM_SIMULATIONS; sim++) {
+        // Clone current game state
+        let simGames = JSON.parse(JSON.stringify(games));
+        
+        // Determine which games the selected team wins (if forced scenario)
+        let teamWinsThisSim = [];
+        if (forcedWins !== null) {
+          // Forced wins: randomly select N of the team's games to win
+          const indices = teamRemainingGames.map((g, i) => i);
+          // Shuffle indices
+          for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+          }
+          teamWinsThisSim = indices.slice(0, forcedWins).map(i => teamRemainingGames[i].id);
+        }
+        
+        // Simulate ALL remaining games (not just the selected team's)
+        allRemainingGames.forEach(g => {
+          const simGame = simGames.find(sg => sg.id === g.id);
+          if (!simGame) return;
+          
+          // Check if this is one of the selected team's games with a forced result
+          const isTeamGame = g.away === teamName || g.home === teamName;
+          const hasForcedResult = forcedWins !== null && isTeamGame;
+          
+          if (hasForcedResult) {
+            // Use forced result for this team's games
+            const teamShouldWin = teamWinsThisSim.includes(g.id);
+            if (g.away === teamName) {
+              simGame.winner = teamShouldWin ? 'away' : 'home';
+            } else {
+              simGame.winner = teamShouldWin ? 'home' : 'away';
+            }
+          } else {
+            // Simulate based on win probability for all other games
+            const awayTeam = findTeam(g.away);
+            const homeTeam = findTeam(g.home);
+            if (!awayTeam || !homeTeam) return;
+            
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            const adjustedHomeRTG = homeRTG + 3;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            const z = ratingDiff / 9;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            
+            const homeWins = Math.random() < homeWinProb;
+            simGame.winner = homeWins ? 'home' : 'away';
+          }
+        });
+        
+        // Recalculate standings with simulated results
+        const simTeams = JSON.parse(JSON.stringify(initialTeams));
+        simGames.forEach(game => {
+          if (!game.winner || game.removed) return;
+          
+          const awayTeam = simTeams.find(t => t.name === game.away);
+          const homeTeam = simTeams.find(t => t.name === game.home);
+          if (!awayTeam || !homeTeam) return;
+          
+          const awayKP = getKenPomPoints(awayTeam.kenpom);
+          const homeKP = getKenPomPoints(homeTeam.kenpom);
+          
+          if (game.winner === 'away') {
+            awayTeam.points += getQuadPoints(game.awayQuad, true);
+            awayTeam.games += 1;
+            homeTeam.points += getQuadPoints(game.homeQuad, false);
+            homeTeam.games += 1;
+            
+            const adjustment = calculateKenPomAdjustment(awayKP, homeKP, false);
+            awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) + adjustment;
+            homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) - adjustment;
+          } else {
+            homeTeam.points += getQuadPoints(game.homeQuad, true);
+            homeTeam.games += 1;
+            awayTeam.points += getQuadPoints(game.awayQuad, false);
+            awayTeam.games += 1;
+            
+            const adjustment = calculateKenPomAdjustment(homeKP, awayKP, true);
+            homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) + adjustment;
+            awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) - adjustment;
+          }
+        });
+        
+        // Calculate final ratings
+        simTeams.forEach(t => {
+          const quadPPG = t.points / t.games;
+          const normalizedQuadPoints = quadPPG * 16;
+          const kenpomRTG = t.kenpomRTG !== undefined ? t.kenpomRTG : getKenPomPoints(t.kenpom);
+          t.ppg = normalizedQuadPoints + kenpomRTG;
+        });
+        
+        simTeams.sort((a, b) => b.ppg - a.ppg);
+        
+        // Get tournament field
+        const simField = getTournamentFieldFromTeams(simTeams);
+        const inTournament = simField.all.includes(teamName);
+        const rank = simTeams.findIndex(t => t.name === teamName) + 1;
+        
+        if (!inTournament) {
+          seedCounts['Out']++;
+        } else {
+          // Find seed (4 teams per seed line)
+          const seed = Math.min(16, Math.ceil(rank / 4));
+          
+          // Apply bubble penalty for teams on the cut line
+          const bubblePenalty = calculateBubblePenalty(rank, simTeams.length);
+          
+          // With bubble penalty chance, they get bumped out by random autobid
+          if (Math.random() < bubblePenalty) {
+            seedCounts['Out']++;
+          } else {
+            seedCounts[seed]++;
+          }
+        }
+      }
+      
+      // Convert counts to percentages
+      const seedProbs = {};
+      for (let key in seedCounts) {
+        seedProbs[key] = (seedCounts[key] / NUM_SIMULATIONS * 100).toFixed(1);
+      }
+      
+      return seedProbs;
+    }
+    
+    function getTournamentFieldFromTeams(teamsArray) {
+      // Get conference champions
+      const confChamps = {};
+      Object.keys(conferences).forEach(conf => {
+        const confTeams = teamsArray.filter(t => conferences[conf].includes(t.name));
+        if (confTeams.length > 0) {
+          confChamps[conf] = conferenceChampions[conf] || confTeams[0].name;
+        }
+      });
+      
+      const autobids = Object.values(confChamps);
+      const atLargePool = teamsArray.filter(t => !autobids.includes(t.name));
+      const atLarge = atLargePool.slice(0, 37).map(t => t.name);
+      
+      return {
+        autobids: autobids,
+        atLarge: atLarge,
+        all: [...autobids, ...atLarge]
+      };
+    }
+    
+    function calculateBubblePenalty(rank, totalTeams) {
+      // Teams ranked 64-68 (last 5 at-large spots) get penalized
+      // because random autobids could bump them out
+      const atLargeRank = rank - 31; // Subtract 31 autobids to get at-large rank
+      
+      if (atLargeRank <= 32) return 0; // Safe, no penalty
+      if (atLargeRank > 37) return 0; // Already out, no penalty needed
+      
+      // Ranks 33-37 (at-large spots 33-37) are vulnerable
+      // 37th: 50% chance of getting bumped (heavy penalty)
+      // 36th: 40% chance
+      // 35th: 30% chance
+      // 34th: 20% chance
+      // 33rd: 10% chance
+      const spotsFromCutline = 37 - atLargeRank; // 0 = 37th, 4 = 33rd
+      const bubblePenalty = (4 - spotsFromCutline) * 0.1; // 0.4, 0.3, 0.2, 0.1, 0
+      
+      return bubblePenalty;
+    }
+
+    function openTeamDetail(teamName, forcedWins = null) {
+      const team = teams.find(t => t.name === teamName);
+      if (!team) return;
+      
+      // Set team name in header
+      document.getElementById('teamDetailName').textContent = teamName;
+      
+      // Get all games for this team
+      const teamGames = games.filter(g => 
+        !g.removed && (g.away === teamName || g.home === teamName)
+      );
+      
+      // Separate completed and upcoming
+      const completed = teamGames.filter(g => g.winner !== null);
+      const upcoming = teamGames.filter(g => g.winner === null);
+      
+      // Run Monte Carlo simulation
+      const seedProbs = runMonteCarloSimulation(teamName, forcedWins);
+      
+      // Calculate quad record
+      const quadRecord = {1: {w: 0, l: 0}, 2: {w: 0, l: 0}, 3: {w: 0, l: 0}, 4: {w: 0, l: 0}};
+      completed.forEach(g => {
+        const isAway = g.away === teamName;
+        const quad = isAway ? g.awayQuad : g.homeQuad;
+        const won = (isAway && g.winner === 'away') || (!isAway && g.winner === 'home');
+        
+        if (won) quadRecord[quad].w++;
+        else quadRecord[quad].l++;
+      });
+      
+      // Build content HTML
+      let contentHTML = `
+        <div style="background: linear-gradient(135deg, rgba(253, 185, 39, 0.1), rgba(255, 107, 53, 0.1)); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 2px solid var(--gold);">
+          <h3 style="color: var(--gold); margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem;">🎲 Seed Probability (1,000 Simulations)</h3>
+          ${forcedWins !== null ? `<div style="text-align: center; color: var(--court-orange); font-weight: bold; margin-bottom: 1rem;">Simulating: Win ${forcedWins} of ${upcoming.length} remaining games</div>` : ''}
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem;">
+      `;
+      
+      // Show seed probabilities
+      for (let seed = 1; seed <= 11; seed++) {
+        const prob = parseFloat(seedProbs[seed] || 0);
+        const barWidth = prob;
+        const isHighProb = prob >= 10;
+        contentHTML += `
+          <div style="background: var(--slate); padding: 0.6rem; border-radius: 6px; text-align: center;">
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 0.3rem;">Seed ${seed}</div>
+            <div style="font-size: 1.2rem; color: ${isHighProb ? 'var(--court-orange)' : 'var(--cream)'}; font-weight: ${isHighProb ? 'bold' : 'normal'};">${prob}%</div>
+            <div style="background: rgba(253, 185, 39, 0.2); height: 4px; border-radius: 2px; margin-top: 0.3rem; overflow: hidden;">
+              <div style="background: var(--gold); height: 100%; width: ${barWidth}%;"></div>
+            </div>
+          </div>
+        `;
+      }
+      
+      const outProb = parseFloat(seedProbs['Out'] || 0);
+      contentHTML += `
+          <div style="background: var(--slate); padding: 0.6rem; border-radius: 6px; text-align: center; border: 2px solid ${outProb > 5 ? '#dc2626' : 'transparent'};">
+            <div style="font-weight: bold; color: ${outProb > 5 ? '#dc2626' : 'var(--gray)'}; margin-bottom: 0.3rem;">Out</div>
+            <div style="font-size: 1.2rem; color: ${outProb > 5 ? '#dc2626' : 'var(--gray)'}; font-weight: ${outProb > 5 ? 'bold' : 'normal'};">${outProb}%</div>
+            <div style="background: rgba(220, 38, 38, 0.2); height: 4px; border-radius: 2px; margin-top: 0.3rem; overflow: hidden;">
+              <div style="background: #dc2626; height: 100%; width: ${outProb}%;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Win scenario buttons
+      if (upcoming.length > 0) {
+        contentHTML += `
+          <div style="margin-top: 1.5rem; text-align: center;">
+            <div style="color: var(--gold); font-weight: bold; margin-bottom: 0.8rem;">Simulate Scenarios:</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+        `;
+        
+        for (let w = 0; w <= upcoming.length; w++) {
+          const isActive = forcedWins === w;
+          contentHTML += `
+            <button onclick="openTeamDetail('${teamName}', ${w})" 
+                    style="padding: 0.5rem 1rem; background: ${isActive ? 'var(--gold)' : 'var(--slate)'}; color: ${isActive ? 'var(--dark)' : 'var(--cream)'}; border: 2px solid var(--gold); border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s;">
+              ${w}/${upcoming.length}
+            </button>
+          `;
+        }
+        
+        contentHTML += `
+            </div>
+          </div>
+        `;
+      }
+      
+      contentHTML += '</div>';
+      
+      // Current ratings and quad record
+      contentHTML += `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+          <div>
+            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Current Ratings</h3>
+            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
+              <div style="margin-bottom: 0.5rem;"><strong>Rank:</strong> ${teams.indexOf(team) + 1}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Skill Rating:</strong> ${(team.kenpomRTG !== undefined ? team.kenpomRTG : getKenPomPoints(team.kenpom)).toFixed(2)}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Resume Rating:</strong> ${((team.points / team.games) * 16).toFixed(2)}</div>
+              <div><strong>Total Rating:</strong> ${team.ppg.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Quad Record</h3>
+            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
+              <div style="margin-bottom: 0.5rem;"><span style="background: #dc2626; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q1</span> ${quadRecord[1].w}-${quadRecord[1].l}</div>
+              <div style="margin-bottom: 0.5rem;"><span style="background: #f59e0b; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q2</span> ${quadRecord[2].w}-${quadRecord[2].l}</div>
+              <div style="margin-bottom: 0.5rem;"><span style="background: #10b981; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q3</span> ${quadRecord[3].w}-${quadRecord[3].l}</div>
+              <div><span style="background: #3b82f6; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q4</span> ${quadRecord[4].w}-${quadRecord[4].l}</div>
+            </div>
+          </div>
+        </div>
+        
+        <h3 style="color: var(--gold); margin-bottom: 1rem;">Remaining Games (${upcoming.length})</h3>
+        <div style="max-height: 250px; overflow-y: auto; margin-bottom: 2rem;">
+      `;
+      
+      if (upcoming.length === 0) {
+        contentHTML += '<p style="text-align: center; opacity: 0.6;">No upcoming games</p>';
+      } else {
+        upcoming.forEach(g => {
+          const isAway = g.away === teamName;
+          const opponent = isAway ? g.home : g.away;
+          const location = isAway ? '@' : 'vs';
+          const quad = isAway ? g.awayQuad : g.homeQuad;
+          const quadClass = `quad-${quad}`;
+          
+          // Calculate win probability
+          const awayTeam = findTeam(g.away);
+          const homeTeam = findTeam(g.home);
+          let winProb = 50;
+          if (awayTeam && homeTeam) {
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            const adjustedHomeRTG = homeRTG + 3;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            const z = ratingDiff / 9;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            winProb = isAway ? ((1 - homeWinProb) * 100) : (homeWinProb * 100);
+          }
+          
+          contentHTML += `
+            <div style="background: var(--slate); padding: 0.8rem; margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${g.date}</strong> - ${location} ${opponent} <span style="color: var(--gold); font-size: 0.85rem;">(${winProb.toFixed(0)}% win)</span>
+              </div>
+              <span class="game-quad ${quadClass}">Q${quad}</span>
+            </div>
+          `;
+        });
+      }
+      
+      contentHTML += '</div>';
+      
+      document.getElementById('teamDetailContent').innerHTML = contentHTML;
+      document.getElementById('teamDetailPanel').style.display = 'flex';
+    }
+      
+
+    function closeTeamDetail() {
+      document.getElementById('teamDetailPanel').style.display = 'none';
     }
 
     function renderBracketPanel(teams, playIn16, playInAtLarge) {
@@ -3523,6 +3933,12 @@
 
     function applyFilter() {
       currentFilter = document.getElementById('filterSelect').value;
+      
+      // If filtering by team and a specific team is selected, open detail panel
+      if (filterMode === 'team' && currentFilter !== 'all') {
+        openTeamDetail(currentFilter);
+      }
+      
       updateDisplay();
     }
 
