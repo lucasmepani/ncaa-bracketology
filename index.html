@@ -117,6 +117,19 @@
       border-color: var(--gray);
     }
 
+    .win-probability {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(253, 185, 39, 0.2);
+      color: var(--cream);
+    }
+
+    .upset-game {
+      background: rgba(255, 107, 53, 0.1);
+      border-radius: 4px;
+      padding: 0.5rem;
+    }
+
     .game-time {
       text-align: center;
       font-size: 0.85rem;
@@ -342,7 +355,7 @@
     }
 
     .scrollable {
-      max-height: 600px;
+      max-height: calc(100vh - 200px);
       overflow-y: auto;
     }
 
@@ -933,6 +946,7 @@
         <p><strong>Select Game Winners:</strong> Click on upcoming games to pick winners and see real-time bracket updates.</p>
         <p><strong>View Options:</strong> Filter games by date or by team to find specific matchups you want to project.</p>
         <p><strong>Visualize Bracket:</strong> Click the "Visualize Bracket" button to see the complete tournament bracket with seeding, play-in games, and regional assignments.</p>
+        <p><strong>🎲 Team Scenarios:</strong> Click "By Team" and select any team to see their seed probabilities. The tool runs 250 simulations of all remaining games to show what seeds they're likely to get. You can also test specific scenarios like "What if they win 4 of their last 6 games?" to see how their chances change.</p>
       </div>
 
       <button class="cover-button" onclick="closeCoverPage()">Enter Bracketology</button>
@@ -1088,6 +1102,20 @@
       <!-- Main Bracket -->
       <div style="overflow-x: auto; padding: 2rem 0;">
         <div id="bracketDisplay" style="display: flex; gap: 3rem; min-width: max-content; justify-content: center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Detail Modal -->
+  <div id="teamDetailPanel" class="panel-overlay" style="display: none;">
+    <div class="panel-content" style="max-width: 900px;">
+      <div class="panel-header-row">
+        <h2 id="teamDetailName" style="color: var(--gold); font-family: 'Oswald', sans-serif;"></h2>
+        <button class="close-btn" onclick="closeTeamDetail()">&times;</button>
+      </div>
+      
+      <div id="teamDetailContent" style="margin-top: 1rem;">
+        <!-- Content will be populated by JavaScript -->
       </div>
     </div>
   </div>
@@ -3027,6 +3055,39 @@
         const homeWinPoints = getQuadPoints(game.homeQuad, true);
         const homeLossPoints = getQuadPoints(game.homeQuad, false);
 
+        // Calculate win probabilities if game not decided
+        let winProbDisplay = '';
+        if (!isCompleted) {
+          const awayTeam = findTeam(game.away);
+          const homeTeam = findTeam(game.home);
+          
+          if (awayTeam && homeTeam) {
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            
+            // Home court advantage: +3 points
+            const adjustedHomeRTG = homeRTG + 4;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            
+            // Win probability: 9 points = 1 standard deviation
+            // Using normal CDF approximation: Prob = 0.5 * (1 + erf(z / sqrt(2)))
+            // Simplified logistic: Prob = 1 / (1 + exp(-z * sqrt(pi/8)))
+            // For our case: z = ratingDiff / 16
+            const z = ratingDiff / 16;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            const awayWinProb = 1 - homeWinProb;
+            
+            winProbDisplay = `
+              <div class="win-probability">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-top: 0.5rem;">
+                  <span>${game.away}: ${(awayWinProb * 100).toFixed(0)}%</span>
+                  <span>${game.home}: ${(homeWinProb * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            `;
+          }
+        }
+
         return `
           <div class="game-card ${isCompleted ? 'completed' : ''}" 
                oncontextmenu="showContextMenu(event, ${game.id}); return false;">
@@ -3051,6 +3112,8 @@
                 <div class="team-net">NET: ${game.homeNet}</div>
               </div>
             </div>
+            
+            ${winProbDisplay}
           </div>
         `;
       }).join('');
@@ -3238,6 +3301,507 @@
 
     function closeBracket() {
       document.getElementById('bracketPanel').style.display = 'none';
+    }
+
+    function runMonteCarloSimulation(teamName, forcedWins = null) {
+      const NUM_SIMULATIONS = 250;
+      const seedCounts = {};
+      for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
+      seedCounts['Out'] = 0;
+      
+      // Get team's remaining games (for forced scenario tracking only)
+      const teamRemainingGames = games.filter(g => 
+        !g.removed && !g.winner && (g.away === teamName || g.home === teamName)
+      );
+      
+      // Get ALL remaining games (for simulation)
+      const allRemainingGames = games.filter(g => !g.removed && !g.winner);
+      
+      for (let sim = 0; sim < NUM_SIMULATIONS; sim++) {
+        // Clone current game state
+        let simGames = JSON.parse(JSON.stringify(games));
+        
+        // Determine which games the selected team wins (if forced scenario)
+        let teamWinsThisSim = [];
+        let teamLossesThisSim = [];
+        
+        if (forcedWins !== null) {
+          // First, separate already-decided games from undecided ones
+          const decidedGames = [];
+          const undecidedGames = [];
+          
+          teamRemainingGames.forEach(g => {
+            const originalGame = games.find(og => og.id === g.id);
+            if (originalGame && originalGame.winner) {
+              // Already decided by user
+              decidedGames.push(g);
+              // Check if team won or lost this game
+              const teamIsAway = g.away === teamName;
+              const teamWon = (teamIsAway && originalGame.winner === 'away') || 
+                              (!teamIsAway && originalGame.winner === 'home');
+              if (teamWon) {
+                teamWinsThisSim.push(g.id);
+              } else {
+                teamLossesThisSim.push(g.id);
+              }
+            } else {
+              undecidedGames.push(g);
+            }
+          });
+          
+          // Calculate how many more wins we need from undecided games
+          const decidedWins = decidedGames.filter(g => teamWinsThisSim.includes(g.id)).length;
+          const remainingWinsNeeded = forcedWins - decidedWins;
+          
+          // If we need more wins, randomly select from undecided games
+          if (remainingWinsNeeded > 0 && undecidedGames.length > 0) {
+            const indices = undecidedGames.map((g, i) => i);
+            // Shuffle indices
+            for (let i = indices.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            const additionalWins = indices.slice(0, Math.min(remainingWinsNeeded, undecidedGames.length))
+                                          .map(i => undecidedGames[i].id);
+            teamWinsThisSim.push(...additionalWins);
+          }
+        }
+        
+        // Simulate ALL remaining games (not just the selected team's)
+        allRemainingGames.forEach(g => {
+          const simGame = simGames.find(sg => sg.id === g.id);
+          if (!simGame) return;
+          
+          // FIRST: Check if user has already decided this game manually
+          const originalGame = games.find(og => og.id === g.id);
+          if (originalGame && originalGame.winner) {
+            // User already picked a winner - respect that choice
+            simGame.winner = originalGame.winner;
+            return;
+          }
+          
+          // SECOND: Check if this is one of the selected team's games with a forced result
+          const isTeamGame = g.away === teamName || g.home === teamName;
+          const hasForcedResult = forcedWins !== null && isTeamGame;
+          
+          if (hasForcedResult) {
+            // Use forced result for this team's games
+            const teamShouldWin = teamWinsThisSim.includes(g.id);
+            if (g.away === teamName) {
+              simGame.winner = teamShouldWin ? 'away' : 'home';
+            } else {
+              simGame.winner = teamShouldWin ? 'home' : 'away';
+            }
+          } else {
+            // Simulate based on win probability for all other games
+            const awayTeam = findTeam(g.away);
+            const homeTeam = findTeam(g.home);
+            if (!awayTeam || !homeTeam) return;
+            
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            const adjustedHomeRTG = homeRTG + 4;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            const z = ratingDiff / 16;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            
+            const homeWins = Math.random() < homeWinProb;
+            simGame.winner = homeWins ? 'home' : 'away';
+          }
+        });
+        
+        // Recalculate standings with simulated results
+        const simTeams = JSON.parse(JSON.stringify(initialTeams));
+        simGames.forEach(game => {
+          if (!game.winner || game.removed) return;
+          
+          const awayTeam = simTeams.find(t => t.name === game.away);
+          const homeTeam = simTeams.find(t => t.name === game.home);
+          if (!awayTeam || !homeTeam) return;
+          
+          const awayKP = getKenPomPoints(awayTeam.kenpom);
+          const homeKP = getKenPomPoints(homeTeam.kenpom);
+          
+          if (game.winner === 'away') {
+            awayTeam.points += getQuadPoints(game.awayQuad, true);
+            awayTeam.games += 1;
+            homeTeam.points += getQuadPoints(game.homeQuad, false);
+            homeTeam.games += 1;
+            
+            const adjustment = calculateKenPomAdjustment(awayKP, homeKP, false);
+            awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) + adjustment;
+            homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) - adjustment;
+          } else {
+            homeTeam.points += getQuadPoints(game.homeQuad, true);
+            homeTeam.games += 1;
+            awayTeam.points += getQuadPoints(game.awayQuad, false);
+            awayTeam.games += 1;
+            
+            const adjustment = calculateKenPomAdjustment(homeKP, awayKP, true);
+            homeTeam.kenpomRTG = (homeTeam.kenpomRTG || homeKP) + adjustment;
+            awayTeam.kenpomRTG = (awayTeam.kenpomRTG || awayKP) - adjustment;
+          }
+        });
+        
+        // Calculate final ratings
+        simTeams.forEach(t => {
+          const quadPPG = t.points / t.games;
+          const normalizedQuadPoints = quadPPG * 16;
+          const kenpomRTG = t.kenpomRTG !== undefined ? t.kenpomRTG : getKenPomPoints(t.kenpom);
+          t.ppg = normalizedQuadPoints + kenpomRTG;
+        });
+        
+        simTeams.sort((a, b) => b.ppg - a.ppg);
+        
+        // Get tournament field
+        const simField = getTournamentFieldFromTeams(simTeams);
+        const inTournament = simField.all.includes(teamName);
+        const rank = simTeams.findIndex(t => t.name === teamName) + 1;
+        
+        if (!inTournament) {
+          seedCounts['Out']++;
+        } else {
+          // Find seed (4 teams per seed line)
+          const seed = Math.min(16, Math.ceil(rank / 4));
+          seedCounts[seed]++;
+        }
+      }
+      
+      // Convert counts to percentages
+      const seedProbs = {};
+      for (let key in seedCounts) {
+        seedProbs[key] = (seedCounts[key] / NUM_SIMULATIONS * 100).toFixed(1);
+      }
+      
+      return seedProbs;
+    }
+    
+    function simulateConferenceTournament(confTeams) {
+      // Simulate single-elimination conference tournament
+      // confTeams is already sorted by rating (best first)
+      // ALL teams in the conference participate
+      
+      if (confTeams.length === 0) return null;
+      if (confTeams.length === 1) return confTeams[0];
+      if (confTeams.length === 2) return simulateGame(confTeams[0], confTeams[1]);
+      
+      const tournamentSize = confTeams.length;
+      
+      // Determine bracket format based on size
+      if (tournamentSize === 3) {
+        // 3 teams: #1 gets bye, #2 vs #3, winner plays #1
+        const sf1_winner = simulateGame(confTeams[1], confTeams[2]);
+        return simulateGame(confTeams[0], sf1_winner);
+      } else if (tournamentSize === 4) {
+        // 4 teams: Standard bracket (1v4, 2v3)
+        const sf1 = simulateGame(confTeams[0], confTeams[3]);
+        const sf2 = simulateGame(confTeams[1], confTeams[2]);
+        return simulateGame(sf1, sf2);
+      } else if (tournamentSize <= 6) {
+        // 5-6 teams: Top 2 get byes
+        const qf1 = tournamentSize >= 6 ? simulateGame(confTeams[2], confTeams[5]) : confTeams[2];
+        const qf2 = tournamentSize >= 5 ? simulateGame(confTeams[3], confTeams[4]) : confTeams[3];
+        const sf1 = simulateGame(confTeams[0], qf1);
+        const sf2 = simulateGame(confTeams[1], qf2);
+        return simulateGame(sf1, sf2);
+      } else if (tournamentSize <= 8) {
+        // 7-8 teams: Standard 8-team bracket
+        // Top half: 1v8, 4v5 → SF
+        // Bottom half: 2v7, 3v6 → SF
+        const qf1 = simulateGame(confTeams[0], confTeams[7] || confTeams[0]);  // 1v8
+        const qf2 = simulateGame(confTeams[1], confTeams[6]);                   // 2v7
+        const qf3 = simulateGame(confTeams[2], confTeams[5]);                   // 3v6
+        const qf4 = simulateGame(confTeams[3], confTeams[4]);                   // 4v5
+        const sf1 = simulateGame(qf1, qf4);  // Top: (1v8) vs (4v5)
+        const sf2 = simulateGame(qf2, qf3);  // Bottom: (2v7) vs (3v6)
+        return simulateGame(sf1, sf2);
+      } else if (tournamentSize <= 12) {
+        // 9-12 teams: Top 4 get byes, play-in games for 5-12
+        const r1_1 = tournamentSize >= 12 ? simulateGame(confTeams[4], confTeams[11]) : confTeams[4];
+        const r1_2 = tournamentSize >= 11 ? simulateGame(confTeams[5], confTeams[10]) : confTeams[5];
+        const r1_3 = tournamentSize >= 10 ? simulateGame(confTeams[6], confTeams[9]) : confTeams[6];
+        const r1_4 = tournamentSize >= 9 ? simulateGame(confTeams[7], confTeams[8]) : confTeams[7];
+        
+        const qf1 = simulateGame(confTeams[0], r1_1);
+        const qf2 = simulateGame(confTeams[1], r1_2);
+        const qf3 = simulateGame(confTeams[2], r1_3);
+        const qf4 = simulateGame(confTeams[3], r1_4);
+        
+        const sf1 = simulateGame(qf1, qf4);
+        const sf2 = simulateGame(qf2, qf3);
+        
+        return simulateGame(sf1, sf2);
+      } else if (tournamentSize <= 16) {
+        // 13-16 teams: Standard 16-team bracket
+        // Round of 16 (if needed)
+        const r16 = [];
+        for (let i = 0; i < 8; i++) {
+          const topSeed = confTeams[i];
+          const bottomSeed = confTeams[tournamentSize - 1 - i];
+          if (bottomSeed) {
+            r16.push(simulateGame(topSeed, bottomSeed));
+          } else {
+            r16.push(topSeed);
+          }
+        }
+        
+        // Quarterfinals
+        const qf1 = simulateGame(r16[0], r16[7]);
+        const qf2 = simulateGame(r16[1], r16[6]);
+        const qf3 = simulateGame(r16[2], r16[5]);
+        const qf4 = simulateGame(r16[3], r16[4]);
+        
+        // Semifinals
+        const sf1 = simulateGame(qf1, qf4);
+        const sf2 = simulateGame(qf2, qf3);
+        
+        // Championship
+        return simulateGame(sf1, sf2);
+      } else {
+        // 17+ teams: Use 32-team bracket (only happens in very large conferences)
+        // Top seeds get byes in early rounds
+        
+        // For simplicity, take top 16 and run 16-team bracket
+        // (In reality, would need multiple bye rounds)
+        const top16 = confTeams.slice(0, 16);
+        
+        const r16 = [];
+        for (let i = 0; i < 8; i++) {
+          r16.push(simulateGame(top16[i], top16[15 - i]));
+        }
+        
+        const qf1 = simulateGame(r16[0], r16[7]);
+        const qf2 = simulateGame(r16[1], r16[6]);
+        const qf3 = simulateGame(r16[2], r16[5]);
+        const qf4 = simulateGame(r16[3], r16[4]);
+        
+        const sf1 = simulateGame(qf1, qf4);
+        const sf2 = simulateGame(qf2, qf3);
+        
+        return simulateGame(sf1, sf2);
+      }
+    }
+    
+    function simulateGame(team1, team2) {
+      // Simulate one game between two teams
+      const rating1 = team1.kenpomRTG !== undefined ? team1.kenpomRTG : getKenPomPoints(team1.kenpom);
+      const rating2 = team2.kenpomRTG !== undefined ? team2.kenpomRTG : getKenPomPoints(team2.kenpom);
+      
+      const ratingDiff = rating1 - rating2;
+      const z = ratingDiff / 16;
+      const team1WinProb = 1 / (1 + Math.exp(-z * 1.7));
+      
+      return Math.random() < team1WinProb ? team1 : team2;
+    }
+    
+    function getTournamentFieldFromTeams(teamsArray) {
+      // Get conference champions by simulating conference tournaments
+      const confChamps = {};
+      Object.keys(conferences).forEach(conf => {
+        const confTeams = teamsArray.filter(t => conferences[conf].includes(t.name));
+        if (confTeams.length > 0) {
+          // Simulate conference tournament
+          const champion = simulateConferenceTournament(confTeams);
+          confChamps[conf] = champion.name;
+        }
+      });
+      
+      const autobids = Object.values(confChamps);
+      const atLargePool = teamsArray.filter(t => !autobids.includes(t.name));
+      const atLarge = atLargePool.slice(0, 37).map(t => t.name);
+      
+      return {
+        autobids: autobids,
+        atLarge: atLarge,
+        all: [...autobids, ...atLarge]
+      };
+    }
+    
+    function openTeamDetail(teamName, forcedWins = null) {
+      const team = teams.find(t => t.name === teamName);
+      if (!team) return;
+      
+      // Set team name in header
+      document.getElementById('teamDetailName').textContent = teamName;
+      
+      // Get all games for this team
+      const teamGames = games.filter(g => 
+        !g.removed && (g.away === teamName || g.home === teamName)
+      );
+      
+      // Separate completed and upcoming
+      const completed = teamGames.filter(g => g.winner !== null);
+      const upcoming = teamGames.filter(g => g.winner === null);
+      
+      // Run Monte Carlo simulation
+      const seedProbs = runMonteCarloSimulation(teamName, forcedWins);
+      
+      
+      // Build content HTML
+      let contentHTML = `
+        <div style="background: linear-gradient(135deg, rgba(253, 185, 39, 0.1), rgba(255, 107, 53, 0.1)); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 2px solid var(--gold);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--gold); font-size: 1.5rem; margin: 0;">🎲 Seed Probability (250 Simulations)</h3>
+            <button onclick="openTeamDetail('${teamName}', null)" style="padding: 0.5rem 1rem; background: var(--court-orange); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+              🔄 Update
+            </button>
+          </div>
+          ${forcedWins !== null ? `<div style="text-align: center; color: var(--court-orange); font-weight: bold; margin-bottom: 1rem;">Simulating: Win ${forcedWins} of ${upcoming.length} remaining games</div>` : ''}
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem;">
+      `;
+      
+      // Show seed probabilities 1-16
+      for (let seed = 1; seed <= 16; seed++) {
+        const prob = parseFloat(seedProbs[seed] || 0);
+        const barWidth = prob;
+        const isHighProb = prob >= 10;
+        contentHTML += `
+          <div style="background: var(--slate); padding: 0.6rem; border-radius: 6px; text-align: center;">
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 0.3rem;">Seed ${seed}</div>
+            <div style="font-size: 1.2rem; color: ${isHighProb ? 'var(--court-orange)' : 'var(--cream)'}; font-weight: ${isHighProb ? 'bold' : 'normal'};">${prob}%</div>
+            <div style="background: rgba(253, 185, 39, 0.2); height: 4px; border-radius: 2px; margin-top: 0.3rem; overflow: hidden;">
+              <div style="background: var(--gold); height: 100%; width: ${barWidth}%;"></div>
+            </div>
+          </div>
+        `;
+      }
+      
+      const outProb = parseFloat(seedProbs['Out'] || 0);
+      contentHTML += `
+          <div style="background: var(--slate); padding: 0.6rem; border-radius: 6px; text-align: center; border: 2px solid ${outProb > 5 ? '#dc2626' : 'transparent'};">
+            <div style="font-weight: bold; color: ${outProb > 5 ? '#dc2626' : 'var(--gray)'}; margin-bottom: 0.3rem;">Out</div>
+            <div style="font-size: 1.2rem; color: ${outProb > 5 ? '#dc2626' : 'var(--gray)'}; font-weight: ${outProb > 5 ? 'bold' : 'normal'};">${outProb}%</div>
+            <div style="background: rgba(220, 38, 38, 0.2); height: 4px; border-radius: 2px; margin-top: 0.3rem; overflow: hidden;">
+              <div style="background: #dc2626; height: 100%; width: ${outProb}%;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Win scenario buttons
+      if (upcoming.length > 0) {
+        contentHTML += `
+          <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+              <div style="color: var(--gold); font-weight: bold;">Simulate Scenarios:</div>
+              <button onclick="autoWinConference('${teamName}')" style="padding: 0.4rem 0.8rem; background: var(--court-orange); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
+                🏆 Auto-Win Conference
+              </button>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+        `;
+        
+        for (let w = 0; w <= upcoming.length; w++) {
+          const isActive = forcedWins === w;
+          contentHTML += `
+            <button onclick="openTeamDetail('${teamName}', ${w})" 
+                    style="padding: 0.5rem 1rem; background: ${isActive ? 'var(--gold)' : 'var(--slate)'}; color: ${isActive ? 'var(--dark)' : 'var(--cream)'}; border: 2px solid var(--gold); border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s;">
+              ${w}/${upcoming.length}
+            </button>
+          `;
+        }
+        
+        contentHTML += `
+            </div>
+          </div>
+        `;
+      }
+      
+      contentHTML += '</div>';
+      
+      // Current ratings and quad record
+      contentHTML += `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+          <div>
+            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Current Ratings</h3>
+            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
+              <div style="margin-bottom: 0.5rem;"><strong>Rank:</strong> ${teams.indexOf(team) + 1}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Skill Rating:</strong> ${(team.kenpomRTG !== undefined ? team.kenpomRTG : getKenPomPoints(team.kenpom)).toFixed(2)}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>Resume Rating:</strong> ${((team.points / team.games) * 16).toFixed(2)}</div>
+              <div><strong>Total Rating:</strong> ${team.ppg.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Quad Record</h3>
+            <div style="background: var(--slate); padding: 1rem; border-radius: 8px;">
+              <div style="margin-bottom: 0.5rem;"><span style="background: #dc2626; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q1</span> ${quadRecord[1].w}-${quadRecord[1].l}</div>
+              <div style="margin-bottom: 0.5rem;"><span style="background: #f59e0b; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q2</span> ${quadRecord[2].w}-${quadRecord[2].l}</div>
+              <div style="margin-bottom: 0.5rem;"><span style="background: #10b981; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q3</span> ${quadRecord[3].w}-${quadRecord[3].l}</div>
+              <div><span style="background: #3b82f6; padding: 0.2rem 0.4rem; border-radius: 3px; color: white; font-weight: bold;">Q4</span> ${quadRecord[4].w}-${quadRecord[4].l}</div>
+            </div>
+          </div>
+        </div>
+        
+        <h3 style="color: var(--gold); margin-bottom: 1rem;">Remaining Games (${upcoming.length})</h3>
+        <div style="max-height: 250px; overflow-y: auto; margin-bottom: 2rem;">
+      `;
+      
+      if (upcoming.length === 0) {
+        contentHTML += '<p style="text-align: center; opacity: 0.6;">No upcoming games</p>';
+      } else {
+        upcoming.forEach(g => {
+          const isAway = g.away === teamName;
+          const opponent = isAway ? g.home : g.away;
+          const location = isAway ? '@' : 'vs';
+          const quad = isAway ? g.awayQuad : g.homeQuad;
+          const quadClass = `quad-${quad}`;
+          
+          // Calculate win probability
+          const awayTeam = findTeam(g.away);
+          const homeTeam = findTeam(g.home);
+          let winProb = 50;
+          if (awayTeam && homeTeam) {
+            const awayRTG = awayTeam.kenpomRTG !== undefined ? awayTeam.kenpomRTG : getKenPomPoints(awayTeam.kenpom);
+            const homeRTG = homeTeam.kenpomRTG !== undefined ? homeTeam.kenpomRTG : getKenPomPoints(homeTeam.kenpom);
+            const adjustedHomeRTG = homeRTG + 4;
+            const ratingDiff = adjustedHomeRTG - awayRTG;
+            const z = ratingDiff / 16;
+            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            winProb = isAway ? ((1 - homeWinProb) * 100) : (homeWinProb * 100);
+          }
+          
+          contentHTML += `
+            <div style="background: var(--slate); padding: 0.8rem; margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${g.date}</strong> - ${location} ${opponent} <span style="color: var(--gold); font-size: 0.85rem;">(${winProb.toFixed(0)}% win)</span>
+              </div>
+              <span class="game-quad ${quadClass}">Q${quad}</span>
+            </div>
+          `;
+        });
+      }
+      
+      contentHTML += '</div>';
+      
+      document.getElementById('teamDetailContent').innerHTML = contentHTML;
+      document.getElementById('teamDetailPanel').style.display = 'flex';
+    }
+      
+
+    function autoWinConference(teamName) {
+      // Find the team's conference
+      const conference = getTeamConference(teamName);
+      if (!conference) {
+        alert(`${teamName} doesn't have a conference!`);
+        return;
+      }
+      
+      // Set this team as the conference champion
+      conferenceChampions[conference] = teamName;
+      
+      // Recalculate and update display
+      recalculateRankings();
+      updateDisplay();
+      
+      // Reopen the team detail panel
+      openTeamDetail(teamName, null);
+      
+      alert(`${teamName} set as ${conference} champion!`);
+    }
+
+    function closeTeamDetail() {
+      document.getElementById('teamDetailPanel').style.display = 'none';
     }
 
     function renderBracketPanel(teams, playIn16, playInAtLarge) {
@@ -3523,6 +4087,12 @@
 
     function applyFilter() {
       currentFilter = document.getElementById('filterSelect').value;
+      
+      // If filtering by team and a specific team is selected, open detail panel
+      if (filterMode === 'team' && currentFilter !== 'all') {
+        openTeamDetail(currentFilter);
+      }
+      
       updateDisplay();
     }
 
