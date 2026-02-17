@@ -1120,6 +1120,17 @@
     </div>
   </div>
 
+  <!-- Conference Outlook Panel (Bottom Right) -->
+  <div id="conferenceOutlookPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 400px; max-height: 600px; background: var(--card-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 1.5rem; overflow-y: auto; z-index: 2000; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin: 0;">CONFERENCE OUTLOOK</h3>
+      <button onclick="closeConferenceOutlook()" style="background: none; border: none; color: var(--cream); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
+    </div>
+    <div id="conferenceOutlookContent">
+      <!-- Content will be populated by JavaScript -->
+    </div>
+  </div>
+
   <script>
     // Enable/disable archive button based on selection
     document.addEventListener('DOMContentLoaded', function() {
@@ -3140,6 +3151,60 @@
       }).join('');
     }
 
+    function isTeamLockedIn(teamName) {
+      // Check if team has 0% chance of being OUT even if they lose all remaining games
+      // Run a quick simulation where the team loses all remaining games
+      
+      const team = teams.find(t => t.name === teamName);
+      if (!team) return false;
+      
+      // Get team's remaining games
+      const teamGames = games.filter(g => 
+        !g.removed && !g.winner && (g.away === teamName || g.home === teamName)
+      );
+      
+      if (teamGames.length === 0) return false; // No games left, can't be "locked"
+      
+      // Clone teams for simulation
+      const simTeams = JSON.parse(JSON.stringify(teams));
+      
+      // Simulate team losing all remaining games
+      teamGames.forEach(g => {
+        const awayTeam = simTeams.find(t => t.name === g.away);
+        const homeTeam = simTeams.find(t => t.name === g.home);
+        if (!awayTeam || !homeTeam) return;
+        
+        const isAway = g.away === teamName;
+        const quad = isAway ? g.awayQuad : g.homeQuad;
+        const lossPoints = getQuadPoints(quad, false);
+        
+        // Apply loss to the team
+        if (isAway) {
+          awayTeam.points += lossPoints;
+          awayTeam.games += 1;
+        } else {
+          homeTeam.points += lossPoints;
+          homeTeam.games += 1;
+        }
+      });
+      
+      // Recalculate ratings
+      simTeams.forEach(t => {
+        const quadPPG = t.points / t.games;
+        const normalizedQuadPoints = quadPPG * 16;
+        const kenpomRTG = t.kenpomRTG !== undefined ? t.kenpomRTG : getKenPomPoints(t.kenpom);
+        t.ppg = normalizedQuadPoints + kenpomRTG;
+      });
+      
+      simTeams.sort((a, b) => b.ppg - a.ppg);
+      
+      // Check if team is still in tournament field
+      const simField = getTournamentFieldFromTeams(simTeams);
+      const stillIn = simField.all.includes(teamName);
+      
+      return stillIn; // If they're in even after losing all games, they're locked
+    }
+
     function renderRankings() {
       const tbody = document.getElementById('rankingsBody');
       const tournamentField = getTournamentField();
@@ -3204,6 +3269,13 @@
         const currentChampion = conference ? getConferenceChampion(conference) : null;
         const isChampion = team.name === currentChampion;
         
+        // Check if team is LOCKED IN (0% out even if they lose all remaining games)
+        const teamGames = games.filter(g => 
+          !g.removed && !g.winner && (g.away === team.name || g.home === team.name)
+        );
+        const isLocked = teamGames.length > 0 && isTeamLockedIn(team.name);
+        const lockEmoji = isLocked ? ' 🔒' : '';
+        
         // Championship checkbox
         const championCheckbox = conference ? `
           <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem;">
@@ -3224,7 +3296,7 @@
           <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
             <td class="rank-cell">${rank}</td>
             <td class="team-cell">
-              ${team.name}
+              ${team.name}${lockEmoji}
               ${conference ? `<div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.2rem;">${conference}</div>` : ''}
             </td>
             <td class="center">${kenpomRTG.toFixed(2)}</td>
@@ -3666,6 +3738,9 @@
       // Run Monte Carlo simulation
       const seedProbs = runMonteCarloSimulation(teamName, forcedWins);
       
+      // Open Conference Outlook panel
+      openConferenceOutlook(teamName);
+      
       
       // Build content HTML
       let contentHTML = `
@@ -3820,6 +3895,115 @@
 
     function closeTeamDetail() {
       document.getElementById('teamDetailPanel').style.display = 'none';
+      closeConferenceOutlook();
+    }
+    
+    function openConferenceOutlook(teamName) {
+      const team = teams.find(t => t.name === teamName);
+      if (!team) return;
+      
+      const conference = getTeamConference(teamName);
+      if (!conference) return;
+      
+      // Update title
+      document.getElementById('conferenceOutlookTitle').textContent = conference.toUpperCase();
+      
+      // Get all teams in this conference
+      const confTeams = teams.filter(t => conferences[conference].includes(t.name));
+      confTeams.sort((a, b) => b.ppg - a.ppg); // Sort by total rating
+      
+      // Simulate conference tournament 1000 times to get championship odds
+      const NUM_SIMS = 1000;
+      const champCounts = {};
+      confTeams.forEach(t => champCounts[t.name] = 0);
+      
+      for (let i = 0; i < NUM_SIMS; i++) {
+        const champion = simulateConferenceTournament(confTeams);
+        if (champion) champCounts[champion.name]++;
+      }
+      
+      // Get tournament field for status calculation (same as main rankings)
+      const tournamentField = getTournamentField();
+      const autobids = tournamentField.autobids;
+      const atLarge = tournamentField.atLarge;
+      const inTournament = tournamentField.all;
+      
+      // Get at-large teams sorted by PPG for bubble calculation
+      const atLargeTeams = teams.filter(t => !autobids.includes(t.name)).sort((a, b) => b.ppg - a.ppg);
+      
+      // Bubble categories (at-large only):
+      const last4In = atLargeTeams.slice(33, 37).map(t => t.name);     // 34-37 at-large
+      const next4In = atLargeTeams.slice(29, 33).map(t => t.name);     // 30-33 at-large
+      const first4Out = atLargeTeams.slice(37, 41).map(t => t.name);   // 38-41 at-large
+      const next4Out = atLargeTeams.slice(41, 45).map(t => t.name);    // 42-45 at-large
+      
+      // Build HTML
+      let html = '<div style="font-size: 0.85rem;">';
+      
+      confTeams.forEach((t, index) => {
+        const rank = index + 1;
+        const rating = t.ppg.toFixed(1);
+        const champProb = ((champCounts[t.name] / NUM_SIMS) * 100).toFixed(1);
+        
+        const teamRank = teams.indexOf(t) + 1;
+        
+        // Use exact same status logic as main rankings table
+        const isAutobid = autobids.includes(t.name);
+        const isInTournament = inTournament.includes(t.name);
+        const isLast4In = last4In.includes(t.name);
+        const isNext4In = next4In.includes(t.name);
+        const isFirst4Out = first4Out.includes(t.name);
+        const isNext4Out = next4Out.includes(t.name);
+        
+        let status;
+        
+        if (isAutobid) {
+          status = '<span style="color: #10b981; font-weight: bold;">AUTOBID</span>';
+        } else if (isLast4In) {
+          status = '<span style="color: #f59e0b; font-weight: bold;">LAST 4 IN</span>';
+        } else if (isNext4In) {
+          status = '<span style="color: #10b981; font-weight: bold;">NEXT 4 IN</span>';
+        } else if (isInTournament) {
+          status = '<span style="color: #10b981; font-weight: bold;">IN</span>';
+        } else if (isFirst4Out) {
+          status = '<span style="color: #ef4444;">FIRST 4 OUT</span>';
+        } else if (isNext4Out) {
+          status = '<span style="color: #ef4444;">NEXT 4 OUT</span>';
+        } else {
+          status = '<span style="color: #6b7280;">OUT</span>';
+        }
+        
+        // Highlight the selected team
+        const isSelected = t.name === teamName;
+        const bgColor = isSelected ? 'rgba(253, 185, 39, 0.15)' : 'transparent';
+        const borderLeft = isSelected ? '3px solid var(--gold)' : '3px solid transparent';
+        
+        html += `
+          <div style="background: ${bgColor}; border-left: ${borderLeft}; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 6px; display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.75rem; align-items: center;">
+            <div style="color: var(--gold); font-weight: bold; font-size: 1.1rem;">${rank}</div>
+            <div>
+              <div style="font-weight: bold; color: var(--cream);">${t.name}</div>
+              <div style="color: var(--gray); font-size: 0.8rem;">Overall: #${teamRank} | Rating: ${rating}</div>
+            </div>
+            <div style="text-align: center;">
+              ${status}
+            </div>
+            <div style="text-align: right;">
+              <div style="color: var(--court-orange); font-weight: bold;">${champProb}%</div>
+              <div style="color: var(--gray); font-size: 0.75rem;">Champ</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      
+      document.getElementById('conferenceOutlookContent').innerHTML = html;
+      document.getElementById('conferenceOutlookPanel').style.display = 'block';
+    }
+    
+    function closeConferenceOutlook() {
+      document.getElementById('conferenceOutlookPanel').style.display = 'none';
     }
 
     function renderBracketPanel(teams, playIn16, playInAtLarge) {
