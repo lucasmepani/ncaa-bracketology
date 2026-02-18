@@ -3152,8 +3152,8 @@
     }
 
     function isTeamLockedIn(teamName) {
-      // Check if team has 0% chance of being OUT even if they lose all remaining games
-      // Run a quick simulation where the team loses all remaining games
+      // Check if team is in top 37 at-large even if they lose all remaining games
+      // (They need to be safely in without needing an autobid)
       
       const team = teams.find(t => t.name === teamName);
       if (!team) return false;
@@ -3198,11 +3198,13 @@
       
       simTeams.sort((a, b) => b.ppg - a.ppg);
       
-      // Check if team is still in tournament field
+      // Get tournament field
       const simField = getTournamentFieldFromTeams(simTeams);
-      const stillIn = simField.all.includes(teamName);
       
-      return stillIn; // If they're in even after losing all games, they're locked
+      // Check if team is in top 37 at-large (not relying on autobid)
+      const isInAtLarge = simField.atLarge.includes(teamName);
+      
+      return isInAtLarge; // Locked if they're in top 37 at-large even after losing all games
     }
 
     function renderRankings() {
