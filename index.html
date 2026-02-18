@@ -1121,7 +1121,7 @@
   </div>
 
   <!-- Conference Outlook Panel (Bottom Right) -->
-  <div id="conferenceOutlookPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 400px; max-height: 600px; background: var(--card-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 1.5rem; overflow-y: auto; z-index: 2000; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+  <div id="conferenceOutlookPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 400px; max-height: 500px; background: var(--card-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 1.5rem; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin: 0;">CONFERENCE OUTLOOK</h3>
       <button onclick="closeConferenceOutlook()" style="background: none; border: none; color: var(--cream); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
@@ -2771,6 +2771,7 @@
     let filterMode = 'date'; // 'date' or 'team'
     let currentFilter = 'all';
     let conferenceChampions = {}; // Store manual champion selections: {conference: teamName}
+    let monteCarloData = {}; // Store results from Monte Carlo: {teamName: {seedProbs, confChampProbs}}
 
     function getQuadLevel(opponentNet, location) {
       if (location === 'home') {
@@ -3151,61 +3152,6 @@
       }).join('');
     }
 
-    function isTeamLockedIn(teamName) {
-      // Check if team is in top 37 at-large even if they lose all remaining games
-      // (They need to be safely in without needing an autobid)
-      
-      const team = teams.find(t => t.name === teamName);
-      if (!team) return false;
-      
-      // Get team's remaining games
-      const teamGames = games.filter(g => 
-        !g.removed && !g.winner && (g.away === teamName || g.home === teamName)
-      );
-      
-      if (teamGames.length === 0) return false; // No games left, can't be "locked"
-      
-      // Clone teams for simulation
-      const simTeams = JSON.parse(JSON.stringify(teams));
-      
-      // Simulate team losing all remaining games
-      teamGames.forEach(g => {
-        const awayTeam = simTeams.find(t => t.name === g.away);
-        const homeTeam = simTeams.find(t => t.name === g.home);
-        if (!awayTeam || !homeTeam) return;
-        
-        const isAway = g.away === teamName;
-        const quad = isAway ? g.awayQuad : g.homeQuad;
-        const lossPoints = getQuadPoints(quad, false);
-        
-        // Apply loss to the team
-        if (isAway) {
-          awayTeam.points += lossPoints;
-          awayTeam.games += 1;
-        } else {
-          homeTeam.points += lossPoints;
-          homeTeam.games += 1;
-        }
-      });
-      
-      // Recalculate ratings
-      simTeams.forEach(t => {
-        const quadPPG = t.points / t.games;
-        const normalizedQuadPoints = quadPPG * 16;
-        const kenpomRTG = t.kenpomRTG !== undefined ? t.kenpomRTG : getKenPomPoints(t.kenpom);
-        t.ppg = normalizedQuadPoints + kenpomRTG;
-      });
-      
-      simTeams.sort((a, b) => b.ppg - a.ppg);
-      
-      // Get tournament field
-      const simField = getTournamentFieldFromTeams(simTeams);
-      
-      // Check if team is in top 37 at-large (not relying on autobid)
-      const isInAtLarge = simField.atLarge.includes(teamName);
-      
-      return isInAtLarge; // Locked if they're in top 37 at-large even after losing all games
-    }
 
     function renderRankings() {
       const tbody = document.getElementById('rankingsBody');
@@ -3271,13 +3217,6 @@
         const currentChampion = conference ? getConferenceChampion(conference) : null;
         const isChampion = team.name === currentChampion;
         
-        // Check if team is LOCKED IN (0% out even if they lose all remaining games)
-        const teamGames = games.filter(g => 
-          !g.removed && !g.winner && (g.away === team.name || g.home === team.name)
-        );
-        const isLocked = teamGames.length > 0 && isTeamLockedIn(team.name);
-        const lockEmoji = isLocked ? ' 🔒' : '';
-        
         // Championship checkbox
         const championCheckbox = conference ? `
           <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.85rem;">
@@ -3298,7 +3237,7 @@
           <tr class="${rowClass} ${cutlineClass} ${highlightClass}">
             <td class="rank-cell">${rank}</td>
             <td class="team-cell">
-              ${team.name}${lockEmoji}
+              ${team.name}
               ${conference ? `<div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.2rem;">${conference}</div>` : ''}
             </td>
             <td class="center">${kenpomRTG.toFixed(2)}</td>
@@ -3403,6 +3342,14 @@
       const seedCounts = {};
       for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
       seedCounts['Out'] = 0;
+      
+      // Track conference championship wins for ALL teams in the conference
+      const teamConference = getTeamConference(teamName);
+      const confChampCounts = {};
+      if (teamConference) {
+        const confTeams = conferences[teamConference] || [];
+        confTeams.forEach(t => confChampCounts[t] = 0);
+      }
       
       // Get team's remaining games (for forced scenario tracking only)
       const teamRemainingGames = games.filter(g => 
@@ -3552,6 +3499,14 @@
         const simField = getTournamentFieldFromTeams(simTeams);
         const inTournament = simField.all.includes(teamName);
         
+        // Track who won the selected team's conference in this simulation
+        if (teamConference && simField.confChamps[teamConference]) {
+          const confChamp = simField.confChamps[teamConference];
+          if (confChampCounts[confChamp] !== undefined) {
+            confChampCounts[confChamp]++;
+          }
+        }
+        
         if (!inTournament) {
           seedCounts['Out']++;
         } else {
@@ -3566,11 +3521,24 @@
         }
       }
       
-      // Convert counts to percentages
+      // Convert seed counts to percentages
       const seedProbs = {};
       for (let key in seedCounts) {
         seedProbs[key] = (seedCounts[key] / NUM_SIMULATIONS * 100).toFixed(1);
       }
+      
+      // Convert conference championship counts to percentages
+      const confChampProbs = {};
+      for (let teamName in confChampCounts) {
+        confChampProbs[teamName] = (confChampCounts[teamName] / NUM_SIMULATIONS * 100).toFixed(1);
+      }
+      
+      // Store data globally for Conference Outlook to use
+      monteCarloData[teamName] = {
+        seedProbs: seedProbs,
+        confChampProbs: confChampProbs,
+        conference: teamConference
+      };
       
       return seedProbs;
     }
@@ -3681,8 +3649,9 @@
       }
     }
     
-    function simulateGame(team1, team2) {
+    function simulateGame(team1, team2, neutralSite = true) {
       // Simulate one game between two teams
+      // neutralSite = true for conference tournaments (no home court advantage)
       const rating1 = team1.kenpomRTG !== undefined ? team1.kenpomRTG : getKenPomPoints(team1.kenpom);
       const rating2 = team2.kenpomRTG !== undefined ? team2.kenpomRTG : getKenPomPoints(team2.kenpom);
       
@@ -3717,7 +3686,8 @@
       return {
         autobids: autobids,
         atLarge: atLarge,
-        all: [...autobids, ...atLarge]
+        all: [...autobids, ...atLarge],
+        confChamps: confChamps  // Return who won each conference
       };
     }
     
@@ -3914,15 +3884,16 @@
       const confTeams = teams.filter(t => conferences[conference].includes(t.name));
       confTeams.sort((a, b) => b.ppg - a.ppg); // Sort by total rating
       
-      // Simulate conference tournament 1000 times to get championship odds
-      const NUM_SIMS = 1000;
-      const champCounts = {};
-      confTeams.forEach(t => champCounts[t.name] = 0);
+      // Use conference championship data from Monte Carlo simulation
+      const mcData = monteCarloData[teamName];
+      const confChampProbs = mcData && mcData.confChampProbs ? mcData.confChampProbs : {};
       
-      for (let i = 0; i < NUM_SIMS; i++) {
-        const champion = simulateConferenceTournament(confTeams);
-        if (champion) champCounts[champion.name]++;
-      }
+      // If no data available (shouldn't happen), show 0% for everyone
+      confTeams.forEach(t => {
+        if (confChampProbs[t.name] === undefined) {
+          confChampProbs[t.name] = '0.0';
+        }
+      });
       
       // Get tournament field for status calculation (same as main rankings)
       const tournamentField = getTournamentField();
@@ -3945,7 +3916,7 @@
       confTeams.forEach((t, index) => {
         const rank = index + 1;
         const rating = t.ppg.toFixed(1);
-        const champProb = ((champCounts[t.name] / NUM_SIMS) * 100).toFixed(1);
+        const champProb = confChampProbs[t.name] || '0.0';
         
         const teamRank = teams.indexOf(t) + 1;
         
