@@ -1108,9 +1108,9 @@
 
   <!-- Team Detail Modal -->
   <div id="teamDetailPanel" class="panel-overlay" style="display: none;">
-    <div class="panel-content" style="max-width: 1400px; display: flex; gap: 2rem;">
+    <div class="panel-content" style="max-width: 1800px; display: flex; gap: 2rem; width: 95%;">
       <!-- Left: Team Monte Carlo -->
-      <div style="flex: 1; min-width: 0;">
+      <div style="flex: 0 0 600px; min-width: 600px;">
         <div class="panel-header-row">
           <h2 id="teamDetailName" style="color: var(--gold); font-family: 'Oswald', sans-serif;"></h2>
           <button class="close-btn" onclick="closeTeamDetail()">&times;</button>
@@ -1121,10 +1121,10 @@
         </div>
       </div>
       
-      <!-- Right: Conference Outlook -->
-      <div id="conferenceOutlookPanel" style="flex: 0 0 400px; min-width: 400px; display: none;">
-        <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin-bottom: 1rem;">CONFERENCE OUTLOOK</h3>
-        <div id="conferenceOutlookContent" style="max-height: 600px; overflow-y: auto;">
+      <!-- Right: Conference Outlook (takes remaining space) -->
+      <div id="conferenceOutlookPanel" style="flex: 1; display: none; min-width: 500px;">
+        <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin-bottom: 1rem; font-size: 1.8rem;">CONFERENCE OUTLOOK</h3>
+        <div id="conferenceOutlookContent" style="max-height: 700px; overflow-y: auto;">
           <!-- Content will be populated by JavaScript -->
         </div>
       </div>
