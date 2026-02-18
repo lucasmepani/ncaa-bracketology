@@ -1108,26 +1108,26 @@
 
   <!-- Team Detail Modal -->
   <div id="teamDetailPanel" class="panel-overlay" style="display: none;">
-    <div class="panel-content" style="max-width: 900px;">
-      <div class="panel-header-row">
-        <h2 id="teamDetailName" style="color: var(--gold); font-family: 'Oswald', sans-serif;"></h2>
-        <button class="close-btn" onclick="closeTeamDetail()">&times;</button>
+    <div class="panel-content" style="max-width: 1400px; display: flex; gap: 2rem;">
+      <!-- Left: Team Monte Carlo -->
+      <div style="flex: 1; min-width: 0;">
+        <div class="panel-header-row">
+          <h2 id="teamDetailName" style="color: var(--gold); font-family: 'Oswald', sans-serif;"></h2>
+          <button class="close-btn" onclick="closeTeamDetail()">&times;</button>
+        </div>
+        
+        <div id="teamDetailContent" style="margin-top: 1rem;">
+          <!-- Content will be populated by JavaScript -->
+        </div>
       </div>
       
-      <div id="teamDetailContent" style="margin-top: 1rem;">
-        <!-- Content will be populated by JavaScript -->
+      <!-- Right: Conference Outlook -->
+      <div id="conferenceOutlookPanel" style="flex: 0 0 400px; min-width: 400px; display: none;">
+        <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin-bottom: 1rem;">CONFERENCE OUTLOOK</h3>
+        <div id="conferenceOutlookContent" style="max-height: 600px; overflow-y: auto;">
+          <!-- Content will be populated by JavaScript -->
+        </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Conference Outlook Panel (Bottom Right) -->
-  <div id="conferenceOutlookPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 400px; max-height: 500px; background: var(--card-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 1.5rem; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <h3 id="conferenceOutlookTitle" style="color: var(--gold); font-family: 'Oswald', sans-serif; margin: 0;">CONFERENCE OUTLOOK</h3>
-      <button onclick="closeConferenceOutlook()" style="background: none; border: none; color: var(--cream); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px;">&times;</button>
-    </div>
-    <div id="conferenceOutlookContent">
-      <!-- Content will be populated by JavaScript -->
     </div>
   </div>
 
@@ -3338,7 +3338,7 @@
     }
 
     function runMonteCarloSimulation(teamName, forcedWins = null) {
-      const NUM_SIMULATIONS = 250;
+      const NUM_SIMULATIONS = 100;
       const seedCounts = {};
       for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
       seedCounts['Out'] = 0;
@@ -3718,7 +3718,7 @@
       let contentHTML = `
         <div style="background: linear-gradient(135deg, rgba(253, 185, 39, 0.1), rgba(255, 107, 53, 0.1)); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 2px solid var(--gold);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="color: var(--gold); font-size: 1.5rem; margin: 0;">🎲 Seed Probability (250 Simulations)</h3>
+            <h3 style="color: var(--gold); font-size: 1.5rem; margin: 0;">🎲 Seed Probability (100 Simulations)</h3>
             <button onclick="openTeamDetail('${teamName}', null)" style="padding: 0.5rem 1rem; background: var(--court-orange); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
               🔄 Update
             </button>
@@ -3867,7 +3867,7 @@
 
     function closeTeamDetail() {
       document.getElementById('teamDetailPanel').style.display = 'none';
-      closeConferenceOutlook();
+      document.getElementById('conferenceOutlookPanel').style.display = 'none';
     }
     
     function openConferenceOutlook(teamName) {
@@ -3876,6 +3876,9 @@
       
       const conference = getTeamConference(teamName);
       if (!conference) return;
+      
+      // Show the conference panel
+      document.getElementById('conferenceOutlookPanel').style.display = 'block';
       
       // Update title
       document.getElementById('conferenceOutlookTitle').textContent = conference.toUpperCase();
@@ -3975,9 +3978,6 @@
       document.getElementById('conferenceOutlookPanel').style.display = 'block';
     }
     
-    function closeConferenceOutlook() {
-      document.getElementById('conferenceOutlookPanel').style.display = 'none';
-    }
 
     function renderBracketPanel(teams, playIn16, playInAtLarge) {
       const playInContainer = document.getElementById('playInGames');
