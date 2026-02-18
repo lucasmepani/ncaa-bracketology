@@ -2949,8 +2949,16 @@
     }
 
     // KenPom Points Calculation with custom distribution
+    // Cache for getKenPomPoints (365 possible values)
+    const kenpomCache = {};
+    
     function getKenPomPoints(kenpomRank) {
       if (!kenpomRank || isNaN(kenpomRank)) return 0;
+      
+      // Check cache first
+      if (kenpomCache[kenpomRank] !== undefined) {
+        return kenpomCache[kenpomRank];
+      }
       
       // Piecewise linear interpolation for exact target points
       // Targets: 1→38, 10→29, 30→21, 80→10, 130→2, 183→0, then mirror for bottom half
@@ -2979,11 +2987,14 @@
         if (rank >= rank1 && rank <= rank2) {
           // Linear interpolation
           const ratio = (rank - rank1) / (rank2 - rank1);
-          return points1 + ratio * (points2 - points1);
+          const result = points1 + ratio * (points2 - points1);
+          kenpomCache[kenpomRank] = result; // Cache it
+          return result;
         }
       }
       
       // Fallback (shouldn't reach here)
+      kenpomCache[kenpomRank] = 0;
       return 0;
     }
 
@@ -3338,7 +3349,7 @@
     }
 
     function runMonteCarloSimulation(teamName, forcedWins = null) {
-      const NUM_SIMULATIONS = 100;
+      const NUM_SIMULATIONS = 500;
       const seedCounts = {};
       for (let i = 1; i <= 16; i++) seedCounts[i] = 0;
       seedCounts['Out'] = 0;
@@ -3361,7 +3372,17 @@
       
       for (let sim = 0; sim < NUM_SIMULATIONS; sim++) {
         // Clone current game state
-        let simGames = JSON.parse(JSON.stringify(games));
+        // Fast clone games - only copy properties we modify
+        let simGames = games.map(g => ({
+          id: g.id,
+          away: g.away,
+          home: g.home,
+          date: g.date,
+          awayQuad: g.awayQuad,
+          homeQuad: g.homeQuad,
+          winner: g.winner,
+          removed: g.removed
+        }));
         
         // Determine which games the selected team wins (if forced scenario)
         let teamWinsThisSim = [];
@@ -3445,7 +3466,7 @@
             const adjustedHomeRTG = homeRTG + 4;
             const ratingDiff = adjustedHomeRTG - awayRTG;
             const z = ratingDiff / 16;
-            const homeWinProb = 1 / (1 + Math.exp(-z * 1.7));
+            const homeWinProb = 1 / (1 + fastExp(-z * 1.7));
             
             const homeWins = Math.random() < homeWinProb;
             simGame.winner = homeWins ? 'home' : 'away';
@@ -3453,12 +3474,26 @@
         });
         
         // Recalculate standings with simulated results
-        const simTeams = JSON.parse(JSON.stringify(initialTeams));
+        // Fast clone: only copy properties we'll modify
+        const simTeams = initialTeams.map(t => ({
+          name: t.name,
+          kenpom: t.kenpom,
+          points: t.points,
+          games: t.games,
+          kenpomRTG: t.kenpomRTG,
+          ppg: t.ppg
+        }));
+        
+        // Create fast lookup map for O(1) team access
+        const teamMap = new Map();
+        simTeams.forEach(t => teamMap.set(t.name, t));
+        
         simGames.forEach(game => {
           if (!game.winner || game.removed) return;
           
-          const awayTeam = simTeams.find(t => t.name === game.away);
-          const homeTeam = simTeams.find(t => t.name === game.home);
+          // Fast O(1) team lookup
+          const awayTeam = teamMap.get(game.away);
+          const homeTeam = teamMap.get(game.home);
           if (!awayTeam || !homeTeam) return;
           
           const awayKP = getKenPomPoints(awayTeam.kenpom);
@@ -3649,6 +3684,16 @@
       }
     }
     
+    // Pre-calculate common exp values for speed
+    const expCache = {};
+    function fastExp(x) {
+      const key = x.toFixed(3);
+      if (expCache[key] === undefined) {
+        expCache[key] = Math.exp(x);
+      }
+      return expCache[key];
+    }
+    
     function simulateGame(team1, team2, neutralSite = true) {
       // Simulate one game between two teams
       // neutralSite = true for conference tournaments (no home court advantage)
@@ -3657,7 +3702,7 @@
       
       const ratingDiff = rating1 - rating2;
       const z = ratingDiff / 16;
-      const team1WinProb = 1 / (1 + Math.exp(-z * 1.7));
+      const team1WinProb = 1 / (1 + fastExp(-z * 1.7));
       
       return Math.random() < team1WinProb ? team1 : team2;
     }
@@ -3718,7 +3763,7 @@
       let contentHTML = `
         <div style="background: linear-gradient(135deg, rgba(253, 185, 39, 0.1), rgba(255, 107, 53, 0.1)); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 2px solid var(--gold);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="color: var(--gold); font-size: 1.5rem; margin: 0;">🎲 Seed Probability (100 Simulations)</h3>
+            <h3 style="color: var(--gold); font-size: 1.5rem; margin: 0;">🎲 Seed Probability (500 Simulations)</h3>
             <button onclick="openTeamDetail('${teamName}', null)" style="padding: 0.5rem 1rem; background: var(--court-orange); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
               🔄 Update
             </button>
